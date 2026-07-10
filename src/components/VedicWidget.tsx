@@ -44,11 +44,16 @@ export default function VedicWidget() {
         
         {/* Panchang Info */}
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-xl font-black tracking-tight">{panchang.tithiName}</span>
             <span className="text-xs font-medium bg-background/50 px-2 py-0.5 rounded-full border border-[var(--glass-border)]">
               {panchang.paksha} Paksha
             </span>
+            {panchang.isEkadashi && (
+              <span className="text-[10px] font-bold bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                <Sparkles className="w-2.5 h-2.5" /> Hari Vasara (Ekadashi)
+              </span>
+            )}
           </div>
           <div className="text-sm font-semibold opacity-80 flex items-center gap-1">
             <Moon className="w-3 h-3" /> Nakshatra: {panchang.nakshatraName}

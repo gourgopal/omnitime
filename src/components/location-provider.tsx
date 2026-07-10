@@ -30,32 +30,89 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         const cachedTime = localStorage.getItem("omnitime_location_time");
         const now = new Date().getTime();
 
+        let hasValidCoords = false;
         if (cached && cachedTime && now - parseInt(cachedTime) < 24 * 60 * 60 * 1000) {
-          setLocationState(JSON.parse(cached));
+          const parsedCache = JSON.parse(cached);
+          setLocationState(parsedCache);
+          if (parsedCache.latitude !== undefined && parsedCache.longitude !== undefined) {
+             hasValidCoords = true;
+          }
           setIsLoading(false);
-          return;
+        }
+        
+        if (hasValidCoords) {
+           return;
         }
 
-        const res = await fetch("https://ipapi.co/json/");
-        const data = await res.json();
-        
-        if (data && data.country_name) {
-          const newLoc = {
-            country_name: data.country_name,
-            country_code: data.country_code,
-            timezone: data.timezone,
-            currency: data.currency,
-            latitude: data.latitude,
-            longitude: data.longitude
-          };
-          setLocationState(newLoc);
-          localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
-          localStorage.setItem("omnitime_location_time", now.toString());
+        // Try getting exact GPS coordinates first if the user allows it
+        // Or if we don't have valid coords from cache
+        if ("geolocation" in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              // We have precise coords! Let's still try to get the country/timezone from ipapi using a reverse geocode if needed,
+              // but for now, we can just mix it with ipapi data.
+              const res = await fetch("https://ipapi.co/json/");
+              const data = await res.json();
+              
+              if (data && data.country_name) {
+                const newLoc = {
+                  country_name: data.country_name,
+                  country_code: data.country_code,
+                  timezone: data.timezone,
+                  currency: data.currency,
+                  latitude: position.coords.latitude, // Use precise GPS
+                  longitude: position.coords.longitude // Use precise GPS
+                };
+                setLocationState(newLoc);
+                localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
+                localStorage.setItem("omnitime_location_time", now.toString());
+              }
+              setIsLoading(false);
+            },
+            async (error) => {
+              // Fallback to IP API
+              const res = await fetch("https://ipapi.co/json/");
+              const data = await res.json();
+              
+              if (data && data.country_name) {
+                const newLoc = {
+                  country_name: data.country_name,
+                  country_code: data.country_code,
+                  timezone: data.timezone,
+                  currency: data.currency,
+                  latitude: data.latitude,
+                  longitude: data.longitude
+                };
+                setLocationState(newLoc);
+                localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
+                localStorage.setItem("omnitime_location_time", now.toString());
+              }
+              setIsLoading(false);
+            },
+            { timeout: 5000, maximumAge: 60000 }
+          );
+        } else {
+            // Fallback for browsers without geolocation
+            const res = await fetch("https://ipapi.co/json/");
+            const data = await res.json();
+            
+            if (data && data.country_name) {
+              const newLoc = {
+                country_name: data.country_name,
+                country_code: data.country_code,
+                timezone: data.timezone,
+                currency: data.currency,
+                latitude: data.latitude,
+                longitude: data.longitude
+              };
+              setLocationState(newLoc);
+              localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
+              localStorage.setItem("omnitime_location_time", now.toString());
+            }
+            setIsLoading(false);
         }
       } catch (error) {
         console.warn("Failed to fetch location", error);
-        // Fallback gracefully without throwing
-      } finally {
         setIsLoading(false);
       }
     };

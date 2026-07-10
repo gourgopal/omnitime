@@ -57,6 +57,8 @@ export function getVedicPanchang(date: Date) {
   return {
     paksha,
     tithiName,
+    tithiNum,
+    isEkadashi: tithiNum === 11,
     nakshatraName,
     phasePercent: (phase / 360) * 100
   };

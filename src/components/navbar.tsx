@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { Clock, Moon, Sun, Menu, X, Monitor, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "@/components/location-provider";
+import { usePreferences } from "@/components/preferences-provider";
 import { PwaInstallPrompt } from "./pwa-install-prompt";
 
 function getFlagEmoji(countryCode: string) {
@@ -21,6 +22,7 @@ export function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { location, isLoading } = useLocation();
+  const { locale, setLocale } = usePreferences();
 
   useEffect(() => {
     setMounted(true);
@@ -58,11 +60,22 @@ export function Navbar() {
           
           <PwaInstallPrompt />
 
-          {/* Location Badge */}
-          {mounted && !isLoading && (
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--glass-bg)] border border-[var(--glass-border)] cursor-help" title={`Detected Location: ${location?.country_name || 'Global'}`}>
-              <span className="text-lg leading-none">{getFlagEmoji(location?.country_code || "")}</span>
-              <span className="text-xs font-bold text-[var(--muted-foreground)]">{location?.country_code || "GLB"}</span>
+          {/* Locale Dropdown */}
+          {mounted && (
+            <div className="relative group hidden sm:block">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--glass-bg)] border border-[var(--glass-border)] cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                <span className="text-lg leading-none">{getFlagEmoji(locale === "GLB" ? "" : locale.substring(0, 2))}</span>
+                <span className="text-xs font-bold text-[var(--muted-foreground)]">{locale}</span>
+              </div>
+              
+              <div className="absolute top-full right-0 mt-2 w-48 bg-[var(--background)] border border-[var(--glass-border)] shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all rounded-lg overflow-hidden flex flex-col z-50">
+                <div className="px-4 py-2 text-xs font-semibold text-[var(--muted-foreground)] bg-[var(--glass-bg)]">Region / Locale</div>
+                <button onClick={() => setLocale("GLB")} className={`px-4 py-3 text-left hover:bg-[var(--glass-bg)] text-sm font-medium transition-colors ${locale === "GLB" ? "text-primary" : ""}`}>🌍 Global</button>
+                <button onClick={() => setLocale("IN (Hindi)")} className={`px-4 py-3 text-left hover:bg-[var(--glass-bg)] text-sm font-medium transition-colors ${locale === "IN (Hindi)" ? "text-primary" : ""}`}>🇮🇳 India (Hindi)</button>
+                <button onClick={() => setLocale("IN (English)")} className={`px-4 py-3 text-left hover:bg-[var(--glass-bg)] text-sm font-medium transition-colors ${locale === "IN (English)" ? "text-primary" : ""}`}>🇮🇳 India (English)</button>
+                <button onClick={() => setLocale("US")} className={`px-4 py-3 text-left hover:bg-[var(--glass-bg)] text-sm font-medium transition-colors ${locale === "US" ? "text-primary" : ""}`}>🇺🇸 United States</button>
+                <button onClick={() => setLocale("UK")} className={`px-4 py-3 text-left hover:bg-[var(--glass-bg)] text-sm font-medium transition-colors ${locale === "UK" ? "text-primary" : ""}`}>🇬🇧 United Kingdom</button>
+              </div>
             </div>
           )}
 

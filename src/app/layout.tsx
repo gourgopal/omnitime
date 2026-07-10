@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TimeFormatProvider } from "@/components/time-format-provider";
 import { LocationProvider } from "@/components/location-provider";
 import { NotificationProvider } from "@/components/notification-provider";
+import { PreferencesProvider } from "@/components/preferences-provider";
 import { Navbar } from "@/components/navbar";
 import { ShareButton } from "@/components/ShareButton";
 
@@ -48,23 +49,25 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <LocationProvider>
-            <TimeFormatProvider>
-              <NotificationProvider>
-                <Navbar />
-                <main className="flex-1 flex flex-col">
-                  {children}
-                </main>
-                <footer className="py-6 border-t border-[var(--glass-border)] bg-[var(--background)]/80 text-center text-sm text-[var(--muted-foreground)]">
-                  <p>&copy; {new Date().getFullYear()} OmniTime. All rights reserved.</p>
-                  <p className="mt-2">
-                    <a href="/sitemap" className="hover:text-primary transition-colors underline decoration-dotted">HTML Sitemap</a>
-                  </p>
-                </footer>
-                <ShareButton />
-              </NotificationProvider>
-            </TimeFormatProvider>
-          </LocationProvider>
+          <PreferencesProvider>
+            <LocationProvider>
+              <TimeFormatProvider>
+                <NotificationProvider>
+                  <Navbar />
+                  <main className="flex-1 flex flex-col">
+                    {children}
+                  </main>
+                  <footer className="py-6 border-t border-[var(--glass-border)] bg-[var(--background)]/80 text-center text-sm text-[var(--muted-foreground)]">
+                    <p>&copy; {new Date().getFullYear()} OmniTime. All rights reserved.</p>
+                    <p className="mt-2">
+                      <a href="/sitemap" className="hover:text-primary transition-colors underline decoration-dotted">HTML Sitemap</a>
+                    </p>
+                  </footer>
+                  <ShareButton />
+                </NotificationProvider>
+              </TimeFormatProvider>
+            </LocationProvider>
+          </PreferencesProvider>
         </ThemeProvider>
       </body>
     </html>

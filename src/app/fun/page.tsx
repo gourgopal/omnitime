@@ -7,6 +7,7 @@ import { LIFESPAN_DATA, calculateLifespan } from "@/lib/lifespan";
 import { getAstrologyChart } from "@/lib/astrology";
 import { getLifePathNumber, getLifePathMeaning } from "@/lib/numerology";
 import { useNotifications } from "@/components/notification-provider";
+import { usePreferences } from "@/components/preferences-provider";
 
 interface SavedPerson { id: string; name: string; dob: string; gender: "male" | "female"; country: string; }
 interface SavedItem { id: string; name: string; date: string; }
@@ -35,6 +36,7 @@ export default function FunCalculators() {
   const [savedCounts, setSavedCounts] = useState<SavedItem[]>([]); // manual countdowns
   
   const { notifGranted, triggerModalWithContext, setIsModalOpen } = useNotifications();
+  const { dob, setDob } = usePreferences();
 
   // Input States
   const [inputName, setInputName] = useState("");
@@ -89,6 +91,12 @@ export default function FunCalculators() {
     const newList: SavedPerson[] = [...savedPeople, { id: generateId(), name: inputName || "Unnamed", dob: inputDate, gender: inputGender, country: inputCountry }];
     setSavedPeople(newList); 
     localStorage.setItem("omnitime_people", JSON.stringify(newList));
+    
+    // Sync to global preferences if it's the first person added or if no global DOB exists
+    if (!dob) {
+      setDob(inputDate);
+    }
+    
     triggerModalWithContext("birthdays");
     resetForm();
   };

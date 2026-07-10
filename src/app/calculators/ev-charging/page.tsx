@@ -1,20 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { BatteryCharging, Zap, Info } from "lucide-react";
-
-type CarPreset = { name: string; capacity: number };
-const PRESETS: CarPreset[] = [
-  { name: "Custom", capacity: 40 },
-  { name: "Tata Nexon EV Max", capacity: 40.5 },
-  { name: "Tata Punch EV Long Range", capacity: 35 },
-  { name: "MG ZS EV", capacity: 50.3 },
-  { name: "Tesla Model 3 Long Range", capacity: 82 },
-  { name: "Hyundai Ioniq 5", capacity: 72.6 },
-];
+import { useState, useRef, useEffect } from "react";
+import { BatteryCharging, Zap, Info, Search, ChevronDown, Check } from "lucide-react";
+import { EV_CARS, EVCar } from "@/lib/ev-cars";
 
 export default function EVChargingCalculator() {
-  const [preset, setPreset] = useState<number>(40.5); // Default Nexon EV Max
   const [capacity, setCapacity] = useState<number>(40.5);
   const [startSoc, setStartSoc] = useState<number>(10);
   const [endSoc, setEndSoc] = useState<number>(100);
@@ -22,11 +12,39 @@ export default function EVChargingCalculator() {
   const [efficiency, setEfficiency] = useState<number>(90); // 10% loss = 90% efficient
   const [curveType, setCurveType] = useState<"conservative" | "aggressive" | "linear">("conservative");
 
+  // Searchable Dropdown State
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCar, setSelectedCar] = useState<EVCar | null>(null);
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredCars = EV_CARS.filter(car => 
+    `${car.brand} ${car.model}`.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Handles preset selection
-  const handlePreset = (val: number) => {
-    setPreset(val);
-    if (val > 0) setCapacity(val);
+  const handleCarSelect = (car: EVCar | null) => {
+    setSelectedCar(car);
+    if (car) {
+      setCapacity(car.capacity);
+    }
+    setIsDropdownOpen(false);
+    setSearchQuery("");
   };
+
+
 
   const calculateTime = () => {
     if (startSoc >= endSoc) return null;
@@ -103,15 +121,64 @@ export default function EVChargingCalculator() {
         {/* Inputs */}
         <div className="glass-panel p-6 space-y-5">
           <div>
-            <label className="block text-sm font-medium mb-1">Vehicle Preset</label>
-            <select 
-              value={preset} 
-              onChange={(e) => handlePreset(parseFloat(e.target.value))}
-              className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-            >
-              {PRESETS.map(p => <option key={p.name} value={p.capacity}>{p.name} ({p.capacity} kWh)</option>)}
-            </select>
-          </div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Zap className="text-primary w-5 h-5"/> Vehicle Details</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-[var(--muted-foreground)] mb-1">Select Vehicle Model</label>
+                <div className="relative" ref={dropdownRef}>
+                  <button 
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="w-full text-left bg-background border border-input rounded-xl px-4 py-2 flex items-center justify-between hover:border-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <span className="truncate">{selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.capacity} kWh)` : "Custom Vehicle"}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {isDropdownOpen && (
+                    <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl shadow-xl overflow-hidden max-h-72 flex flex-col">
+                      <div className="p-2 border-b border-[var(--glass-border)]">
+                        <div className="relative">
+                          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <input 
+                            type="text" 
+                            placeholder="Search Make or Model..."
+                            className="w-full bg-background border border-input rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                      <div className="overflow-y-auto p-2">
+                        <button
+                          onClick={() => handleCarSelect(null)}
+                          className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 text-sm font-medium transition-colors mb-1"
+                        >
+                          Custom Vehicle
+                        </button>
+                        {filteredCars.length === 0 ? (
+                          <div className="p-4 text-center text-sm text-muted-foreground">No vehicles found</div>
+                        ) : (
+                          filteredCars.map((car, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleCarSelect(car)}
+                              className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors flex justify-between items-center group"
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-sm group-hover:text-primary transition-colors">{car.brand} {car.model}</span>
+                                <span className="text-xs text-muted-foreground">{car.country} • {car.year}</span>
+                              </div>
+                              <span className="text-sm font-mono bg-background px-2 py-1 rounded border border-border">{car.capacity} kWh</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">Battery Capacity (kWh)</label>
@@ -183,15 +250,144 @@ export default function EVChargingCalculator() {
                 </div>
               </label>
               <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
-                <input type="radio" checked={curveType === "linear"} onChange={() => setCurveType("linear")} className="text-primary" />
-                <div>
-                  <span className="font-semibold block">Linear (Home AC)</span>
-                  <span className="text-[var(--muted-foreground)] text-xs">Constant speed, ignores tapering</span>
-                </div>
-              </label>
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Zap className="text-primary w-5 h-5"/> Vehicle Details</h2>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-[var(--muted-foreground)] mb-1">Select Vehicle Model</label>
+              <div className="relative" ref={dropdownRef}>
+                <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full text-left bg-background border border-input rounded-xl px-4 py-2 flex items-center justify-between hover:border-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  <span className="truncate">{selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.capacity} kWh)` : "Custom Vehicle"}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isDropdownOpen && (
+                  <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl shadow-xl overflow-hidden max-h-72 flex flex-col">
+                    <div className="p-2 border-b border-[var(--glass-border)]">
+                      <div className="relative">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input 
+                          type="text" 
+                          placeholder="Search Make or Model..."
+                          className="w-full bg-background border border-input rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-2">
+                      <button
+                        onClick={() => handleCarSelect(null)}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 text-sm font-medium transition-colors mb-1"
+                      >
+                        Custom Vehicle
+                      </button>
+                      {filteredCars.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">No vehicles found</div>
+                      ) : (
+                        filteredCars.map((car, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleCarSelect(car)}
+                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors flex justify-between items-center group"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-sm group-hover:text-primary transition-colors">{car.brand} {car.model}</span>
+                              <span className="text-xs text-muted-foreground">{car.country} • {car.year}</span>
+                            </div>
+                            <span className="text-sm font-mono bg-background px-2 py-1 rounded border border-border">{car.capacity} kWh</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Battery Capacity (kWh)</label>
+              <input
+                type="number"
+                value={capacity}
+                onChange={(e) => setCapacity(parseFloat(e.target.value) || 0)}
+                className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Start SoC (%)</label>
+                <input
+                  type="number" min="0" max="99"
+                  value={startSoc}
+                  onChange={(e) => setStartSoc(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">End SoC (%)</label>
+                <input
+                  type="number" min="1" max="100"
+                  value={endSoc}
+                  onChange={(e) => setEndSoc(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Charger Output (kW)</label>
+                <input
+                  type="number" step="0.1"
+                  value={chargerKw}
+                  onChange={(e) => setChargerKw(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Efficiency (%)</label>
+                <input
+                  type="number" min="50" max="100"
+                  value={efficiency}
+                  onChange={(e) => setEfficiency(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Charging Curve / Taper</label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
+                  <input type="radio" checked={curveType === "conservative"} onChange={() => setCurveType("conservative")} className="text-primary" />
+                  <div>
+                    <span className="font-semibold block">Conservative (e.g., Tata EZ Charge)</span>
+                    <span className="text-[var(--muted-foreground)] text-xs">Slows at 80%, drops heavily at 90%</span>
+                  </div>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
+                  <input type="radio" checked={curveType === "aggressive"} onChange={() => setCurveType("aggressive")} className="text-primary" />
+                  <div>
+                    <span className="font-semibold block">Aggressive (e.g., Relux)</span>
+                    <span className="text-[var(--muted-foreground)] text-xs">Full speed until 95%, then slows</span>
+                  </div>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
+                  <input type="radio" checked={curveType === "linear"} onChange={() => setCurveType("linear")} className="text-primary" />
+                  <div>
+                    <span className="font-semibold block">Linear (Home AC)</span>
+                    <span className="text-[var(--muted-foreground)] text-xs">Constant speed, ignores tapering</span>
+                  </div>
+                </label>
+              </div>
             </div>
           </div>
-
         </div>
 
         {/* Results */}

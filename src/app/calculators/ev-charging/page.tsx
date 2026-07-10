@@ -34,7 +34,6 @@ export default function EVChargingCalculator() {
     `${car.brand} ${car.model}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handles preset selection
   const handleCarSelect = (car: EVCar | null) => {
     setSelectedCar(car);
     if (car) {
@@ -43,8 +42,6 @@ export default function EVChargingCalculator() {
     setIsDropdownOpen(false);
     setSearchQuery("");
   };
-
-
 
   const calculateTime = () => {
     if (startSoc >= endSoc) return null;
@@ -68,10 +65,6 @@ export default function EVChargingCalculator() {
     let phases = [];
 
     if (curveType === "conservative") {
-      // Conservative (e.g. Tata Power EZ Charge)
-      // 0-80% @ 100% power
-      // 80-90% @ 50% power
-      // 90-100% @ 25% power
       const phase1 = calculatePhase(0, 80, 1);
       const phase2 = calculatePhase(80, 90, 0.5);
       const phase3 = calculatePhase(90, 100, 0.25);
@@ -83,9 +76,6 @@ export default function EVChargingCalculator() {
         { name: "Trickle (90-100%)", time: phase3 }
       ];
     } else if (curveType === "aggressive") {
-      // Aggressive (e.g. Relux Chargers)
-      // 0-95% @ 100% power
-      // 95-100% @ 50% power
       const phase1 = calculatePhase(0, 95, 1);
       const phase2 = calculatePhase(95, 100, 0.5);
       
@@ -95,7 +85,6 @@ export default function EVChargingCalculator() {
         { name: "Trickle (95-100%)", time: phase2 }
       ];
     } else {
-      // Linear (Home AC charging usually doesn't taper much until the very end, effectively linear for math purposes)
       totalHours = calculatePhase(0, 100, 1);
       phases = [{ name: "Constant Charge", time: totalHours }];
     }
@@ -120,7 +109,7 @@ export default function EVChargingCalculator() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Inputs */}
         <div className="glass-panel p-6 space-y-5">
-          <div>
+          <div className="bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-2xl p-6 shadow-sm">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Zap className="text-primary w-5 h-5"/> Vehicle Details</h2>
             
             <div className="space-y-4">
@@ -180,211 +169,83 @@ export default function EVChargingCalculator() {
                 </div>
               </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Battery Capacity (kWh)</label>
-            <input
-              type="number"
-              value={capacity}
-              onChange={(e) => setCapacity(parseFloat(e.target.value) || 0)}
-              className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-            />
-          </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Battery Capacity (kWh)</label>
+                <input
+                  type="number"
+                  value={capacity}
+                  onChange={(e) => setCapacity(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Start SoC (%)</label>
-              <input
-                type="number" min="0" max="99"
-                value={startSoc}
-                onChange={(e) => setStartSoc(parseFloat(e.target.value) || 0)}
-                className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">End SoC (%)</label>
-              <input
-                type="number" min="1" max="100"
-                value={endSoc}
-                onChange={(e) => setEndSoc(parseFloat(e.target.value) || 0)}
-                className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Charger Output (kW)</label>
-              <input
-                type="number" step="0.1"
-                value={chargerKw}
-                onChange={(e) => setChargerKw(parseFloat(e.target.value) || 0)}
-                className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Efficiency (%)</label>
-              <input
-                type="number" min="50" max="100"
-                value={efficiency}
-                onChange={(e) => setEfficiency(parseFloat(e.target.value) || 0)}
-                className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Charging Curve / Taper</label>
-            <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
-                <input type="radio" checked={curveType === "conservative"} onChange={() => setCurveType("conservative")} className="text-primary" />
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="font-semibold block">Conservative (e.g., Tata EZ Charge)</span>
-                  <span className="text-[var(--muted-foreground)] text-xs">Slows at 80%, drops heavily at 90%</span>
+                  <label className="block text-sm font-medium mb-1">Start SoC (%)</label>
+                  <input
+                    type="number" min="0" max="99"
+                    value={startSoc}
+                    onChange={(e) => setStartSoc(parseFloat(e.target.value) || 0)}
+                    className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                  />
                 </div>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
-                <input type="radio" checked={curveType === "aggressive"} onChange={() => setCurveType("aggressive")} className="text-primary" />
                 <div>
-                  <span className="font-semibold block">Aggressive (e.g., Relux)</span>
-                  <span className="text-[var(--muted-foreground)] text-xs">Full speed until 95%, then slows</span>
+                  <label className="block text-sm font-medium mb-1">End SoC (%)</label>
+                  <input
+                    type="number" min="1" max="100"
+                    value={endSoc}
+                    onChange={(e) => setEndSoc(parseFloat(e.target.value) || 0)}
+                    className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                  />
                 </div>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Zap className="text-primary w-5 h-5"/> Vehicle Details</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-[var(--muted-foreground)] mb-1">Select Vehicle Model</label>
-              <div className="relative" ref={dropdownRef}>
-                <button 
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-full text-left bg-background border border-input rounded-xl px-4 py-2 flex items-center justify-between hover:border-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <span className="truncate">{selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.capacity} kWh)` : "Custom Vehicle"}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-                
-                {isDropdownOpen && (
-                  <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl shadow-xl overflow-hidden max-h-72 flex flex-col">
-                    <div className="p-2 border-b border-[var(--glass-border)]">
-                      <div className="relative">
-                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <input 
-                          type="text" 
-                          placeholder="Search Make or Model..."
-                          className="w-full bg-background border border-input rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          autoFocus
-                        />
-                      </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Charger Output (kW)</label>
+                  <input
+                    type="number" step="0.1"
+                    value={chargerKw}
+                    onChange={(e) => setChargerKw(parseFloat(e.target.value) || 0)}
+                    className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Efficiency (%)</label>
+                  <input
+                    type="number" min="50" max="100"
+                    value={efficiency}
+                    onChange={(e) => setEfficiency(parseFloat(e.target.value) || 0)}
+                    className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Charging Curve / Taper</label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
+                    <input type="radio" checked={curveType === "conservative"} onChange={() => setCurveType("conservative")} className="text-primary" />
+                    <div>
+                      <span className="font-semibold block">Conservative (e.g., Tata EZ Charge)</span>
+                      <span className="text-[var(--muted-foreground)] text-xs">Slows at 80%, drops heavily at 90%</span>
                     </div>
-                    <div className="overflow-y-auto p-2">
-                      <button
-                        onClick={() => handleCarSelect(null)}
-                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 text-sm font-medium transition-colors mb-1"
-                      >
-                        Custom Vehicle
-                      </button>
-                      {filteredCars.length === 0 ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">No vehicles found</div>
-                      ) : (
-                        filteredCars.map((car, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleCarSelect(car)}
-                            className="w-full text-left px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors flex justify-between items-center group"
-                          >
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-sm group-hover:text-primary transition-colors">{car.brand} {car.model}</span>
-                              <span className="text-xs text-muted-foreground">{car.country} • {car.year}</span>
-                            </div>
-                            <span className="text-sm font-mono bg-background px-2 py-1 rounded border border-border">{car.capacity} kWh</span>
-                          </button>
-                        ))
-                      )}
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
+                    <input type="radio" checked={curveType === "aggressive"} onChange={() => setCurveType("aggressive")} className="text-primary" />
+                    <div>
+                      <span className="font-semibold block">Aggressive (e.g., Relux)</span>
+                      <span className="text-[var(--muted-foreground)] text-xs">Full speed until 95%, then slows</span>
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Battery Capacity (kWh)</label>
-              <input
-                type="number"
-                value={capacity}
-                onChange={(e) => setCapacity(parseFloat(e.target.value) || 0)}
-                className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Start SoC (%)</label>
-                <input
-                  type="number" min="0" max="99"
-                  value={startSoc}
-                  onChange={(e) => setStartSoc(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">End SoC (%)</label>
-                <input
-                  type="number" min="1" max="100"
-                  value={endSoc}
-                  onChange={(e) => setEndSoc(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Charger Output (kW)</label>
-                <input
-                  type="number" step="0.1"
-                  value={chargerKw}
-                  onChange={(e) => setChargerKw(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Efficiency (%)</label>
-                <input
-                  type="number" min="50" max="100"
-                  value={efficiency}
-                  onChange={(e) => setEfficiency(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Charging Curve / Taper</label>
-              <div className="flex flex-col gap-2">
-                <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
-                  <input type="radio" checked={curveType === "conservative"} onChange={() => setCurveType("conservative")} className="text-primary" />
-                  <div>
-                    <span className="font-semibold block">Conservative (e.g., Tata EZ Charge)</span>
-                    <span className="text-[var(--muted-foreground)] text-xs">Slows at 80%, drops heavily at 90%</span>
-                  </div>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
-                  <input type="radio" checked={curveType === "aggressive"} onChange={() => setCurveType("aggressive")} className="text-primary" />
-                  <div>
-                    <span className="font-semibold block">Aggressive (e.g., Relux)</span>
-                    <span className="text-[var(--muted-foreground)] text-xs">Full speed until 95%, then slows</span>
-                  </div>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
-                  <input type="radio" checked={curveType === "linear"} onChange={() => setCurveType("linear")} className="text-primary" />
-                  <div>
-                    <span className="font-semibold block">Linear (Home AC)</span>
-                    <span className="text-[var(--muted-foreground)] text-xs">Constant speed, ignores tapering</span>
-                  </div>
-                </label>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)]">
+                    <input type="radio" checked={curveType === "linear"} onChange={() => setCurveType("linear")} className="text-primary" />
+                    <div>
+                      <span className="font-semibold block">Linear (Home AC)</span>
+                      <span className="text-[var(--muted-foreground)] text-xs">Constant speed, ignores tapering</span>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
           </div>

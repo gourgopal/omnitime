@@ -50,7 +50,7 @@ export default function Home() {
       }).catch(e => console.log(e));
 
     // Fetch Live Exchange Rate (USD to INR)
-    fetch("https://api.frankfurter.app/latest?from=USD&to=INR")
+    fetch("https://api.frankfurter.dev/v1/latest?from=USD&to=INR")
       .then(res => res.json())
       .then(data => {
         if(data.rates?.INR) {
@@ -167,7 +167,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <ArrowRightLeft className="text-green-500" size={18} />
-                  <span className="font-bold text-lg">₹{fxRate ? fxRate.toFixed(2) : "83.40"} / $</span>
+                  <span className="font-bold text-lg">₹{fxRate ? fxRate.toFixed(2) : "95.34"} / $</span>
                 </div>
              </div>
              <div className="text-xs font-bold text-[var(--muted-foreground)] mt-2 uppercase tracking-wider">

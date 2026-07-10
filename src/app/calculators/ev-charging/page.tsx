@@ -256,11 +256,11 @@ export default function EVChargingCalculator() {
         <div className="lg:col-span-7 space-y-6">
           
           {/* Vehicle Details */}
-          <div className="glass-panel p-6 relative z-50">
+          <div className="glass-panel p-6 relative z-40">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Zap className="text-primary w-5 h-5"/> Vehicle Details</h2>
             
             <div className="space-y-4">
-              <div className="relative z-50">
+              <div className="relative z-40">
                 <label className="block text-sm text-[var(--muted-foreground)] mb-1">Select Vehicle Model</label>
                 <div className="relative" ref={dropdownRef}>
                   <button 

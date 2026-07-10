@@ -29,7 +29,7 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-md">
+    <header className="sticky top-0 z-[100] w-full border-b border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center space-x-2">
           <Clock className="h-6 w-6 text-primary" />
@@ -68,7 +68,7 @@ export function Navbar() {
                 <span className="text-xs font-bold text-[var(--muted-foreground)]">{locale}</span>
               </div>
               
-              <div className="absolute top-full right-0 mt-2 w-48 bg-[var(--background)] border border-[var(--glass-border)] shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all rounded-lg overflow-hidden flex flex-col z-50">
+              <div className="absolute top-full right-0 mt-2 w-48 bg-[var(--background)] border border-[var(--glass-border)] shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all rounded-lg overflow-hidden flex flex-col z-[100]">
                 <div className="px-4 py-2 text-xs font-semibold text-[var(--muted-foreground)] bg-[var(--glass-bg)]">Region / Locale</div>
                 <button onClick={() => setLocale("GLB")} className={`px-4 py-3 text-left hover:bg-[var(--glass-bg)] text-sm font-medium transition-colors ${locale === "GLB" ? "text-primary" : ""}`}>🌍 Global</button>
                 <button onClick={() => setLocale("IN (Hindi)")} className={`px-4 py-3 text-left hover:bg-[var(--glass-bg)] text-sm font-medium transition-colors ${locale === "IN (Hindi)" ? "text-primary" : ""}`}>🇮🇳 India (Hindi)</button>
@@ -117,7 +117,7 @@ export function Navbar() {
 
       {/* Mobile Navigation */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-[var(--glass-border)] bg-[var(--background)] p-4 space-y-4 shadow-lg absolute w-full left-0 z-50">
+        <div className="md:hidden border-t border-[var(--glass-border)] bg-[var(--background)] p-4 space-y-4 shadow-lg absolute w-full left-0 z-[100]">
           <Link href="/calculators" className="block text-sm font-bold hover:text-primary" onClick={() => setIsMenuOpen(false)}>Calculators Hub</Link>
           <div className="pl-4 space-y-3 border-l-2 border-[var(--glass-border)]">
             <Link href="/calculators/date" className="block text-sm font-medium hover:text-primary" onClick={() => setIsMenuOpen(false)}>Date Add/Sub/Diff</Link>

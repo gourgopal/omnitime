@@ -44,9 +44,9 @@ export default function EVChargingCalculator() {
   
   // Simulation State
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [simSoc, setSimSoc] = useState<number>(10);
   const [chargeHistory, setChargeHistory] = useState<ChargeHistoryItem[]>([]);
-  const simIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -153,63 +153,62 @@ export default function EVChargingCalculator() {
 
   const result = calculateTime();
 
-  const sendNotification = (title: string, options: NotificationOptions) => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.showNotification(title, options);
-      }).catch(() => {
-        new Notification(title, options);
-      });
-    } else if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-      new Notification(title, options);
+  const postToSW = (type: string, payload: any = {}) => {
+    if (typeof window !== "undefined" && navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type, payload });
     }
   };
 
-  // Simulation Logic
-  const toggleSimulation = async () => {
-    if (isSimulating) {
-      if (simIntervalRef.current) clearInterval(simIntervalRef.current);
-      setIsSimulating(false);
-      
-      // Stop Notification & History
-      if (simSoc > startSoc) {
-          const energyUsedSoFar = ((simSoc - startSoc) / 100) * capacity / (efficiency/100);
-          const currentCost = (energyUsedSoFar * costPerKwh).toFixed(2);
-          const rangeGained = Math.round(((simSoc - startSoc) / 100) * customRange);
-          const effectiveKw = chargerKw * (efficiency / 100);
-          const timeHrs = energyUsedSoFar / effectiveKw;
-          const mins = Math.round(timeHrs * 60);
-
-          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-            sendNotification(`Charging Stopped 🛑`, {
-              body: `Stopped at ${simSoc}%.\nAdded: +${rangeGained}km in ~${mins} mins\nCost: ${currency}${currentCost}`,
-              icon: "/favicon.ico",
-              tag: "ev-charging"
-            });
-          }
-          
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    
+    const handleMessage = (event: MessageEvent) => {
+      const { type, payload } = event.data;
+      if (type === 'SYNC_STATE') {
+        setIsSimulating(payload.isSimulating);
+        setIsPaused(payload.isPaused);
+        if (payload.currentSoc !== undefined) setSimSoc(payload.currentSoc);
+      } else if (type === 'PROGRESS') {
+        setSimSoc(payload.currentSoc);
+      } else if (type === 'STOPPED') {
+        setIsSimulating(false);
+        setIsPaused(false);
+        setSimSoc(payload.finalSoc);
+        
+        if (payload.startSoc < payload.finalSoc) {
           setChargeHistory(prev => [{
             id: Date.now().toString(),
             date: new Date(),
-            startSoc,
-            endSoc: simSoc,
-            cost: currentCost,
-            energy: energyUsedSoFar.toFixed(1),
-            timeMins: mins,
-            rangeGained
+            startSoc: payload.startSoc,
+            endSoc: payload.finalSoc,
+            cost: payload.cost,
+            energy: payload.energy,
+            timeMins: payload.timeMins,
+            rangeGained: payload.rangeGained
           }, ...prev]);
-          
-          if (simSoc <= endSoc) {
-             setStartSoc(simSoc);
-          }
+          if (payload.finalSoc <= endSoc) setStartSoc(payload.finalSoc);
+        }
+      } else if (type === 'PAUSED') {
+        setIsPaused(true);
+      } else if (type === 'RESUMED') {
+        setIsPaused(false);
       }
-      
+    };
+    
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    postToSW('SYNC');
+    
+    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+  }, [endSoc]);
+
+  const toggleSimulation = async () => {
+    if (isSimulating) {
+      postToSW('STOP');
       return;
     }
 
     if (!result) return;
 
-    // Check notification permissions
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission !== "granted") {
         await Notification.requestPermission();
@@ -217,70 +216,34 @@ export default function EVChargingCalculator() {
     }
 
     setIsSimulating(true);
+    setIsPaused(false);
     setSimSoc(startSoc);
     
-    let currentSoc = startSoc;
-    const targetSoc = endSoc;
-    
-    // Total hours to simulate.
     const totalMs = result.totalHours * 3600 * 1000;
     let baseInterval = totalMs / (endSoc - startSoc);
     if (isNaN(baseInterval) || !isFinite(baseInterval)) baseInterval = 1000;
     const intervalSpeed = Math.max(10, baseInterval / simSpeed);
 
-    simIntervalRef.current = setInterval(() => {
-      currentSoc += 1;
-      setSimSoc(currentSoc);
-
-      // Send notification every 10%
-      if (currentSoc % 10 === 0 && currentSoc <= targetSoc) {
-        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-          const energyUsedSoFar = ((currentSoc - startSoc) / 100) * capacity / (efficiency/100);
-          const currentCost = (energyUsedSoFar * costPerKwh).toFixed(2);
-          
-          sendNotification(`Charging: ${currentSoc}%`, {
-            body: `Cost Incurred: ${currency}${currentCost}\nRange Gained: +${Math.round(((currentSoc - startSoc) / 100) * customRange)}km\nPowering up...`,
-            icon: "/favicon.ico",
-            tag: "ev-charging"
-          });
-        }
-      }
-
-      if (currentSoc >= targetSoc) {
-        if (simIntervalRef.current) clearInterval(simIntervalRef.current);
-        setIsSimulating(false);
-        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-           sendNotification(`Charging Complete! 🔋`, {
-            body: `Reached ${targetSoc}% SoC. Total Cost: ${currency}${result.totalCost.toFixed(2)}`,
-            icon: "/favicon.ico",
-            tag: "ev-charging"
-          });
-        }
-        
-        const energyUsedSoFar = ((currentSoc - startSoc) / 100) * capacity / (efficiency/100);
-        const timeHrs = energyUsedSoFar / (chargerKw * (efficiency / 100));
-        
-        setChargeHistory(prev => [{
-            id: Date.now().toString(),
-            date: new Date(),
-            startSoc,
-            endSoc: currentSoc,
-            cost: result.totalCost.toFixed(2),
-            energy: energyUsedSoFar.toFixed(1),
-            timeMins: Math.round(timeHrs * 60),
-            rangeGained: Math.round(((currentSoc - startSoc) / 100) * customRange)
-        }, ...prev]);
-        
-        setStartSoc(currentSoc);
-      }
-    }, intervalSpeed);
+    postToSW('START', {
+      startSoc,
+      endSoc,
+      capacity,
+      efficiency,
+      costPerKwh,
+      chargerKw,
+      customRange,
+      currency,
+      intervalSpeed
+    });
   };
 
-  useEffect(() => {
-    return () => {
-      if (simIntervalRef.current) clearInterval(simIntervalRef.current);
-    };
-  }, []);
+  const togglePause = () => {
+    if (isPaused) {
+      postToSW('RESUME');
+    } else {
+      postToSW('PAUSE');
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -577,12 +540,21 @@ export default function EVChargingCalculator() {
                   
                   <div className="flex-grow" />
                   
-                  <button 
-                    onClick={toggleSimulation}
-                    className="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white transition-all shadow-[0_0_20px_rgba(239,68,68,0.4)]"
-                  >
-                    <StopCircle className="w-6 h-6 animate-pulse" /> Stop Simulation
-                  </button>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={togglePause}
+                      className="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 transition-all"
+                    >
+                      {isPaused ? <PlayCircle className="w-5 h-5" /> : <Clock3 className="w-5 h-5" />}
+                      {isPaused ? "Resume" : "Pause"}
+                    </button>
+                    <button 
+                      onClick={toggleSimulation}
+                      className="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white transition-all shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                    >
+                      <StopCircle className="w-5 h-5 animate-pulse" /> Stop
+                    </button>
+                  </div>
                </div>
             </div>
           ) : result ? (

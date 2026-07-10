@@ -20,10 +20,16 @@ const CITIES = [
   { name: "Singapore", timezone: "Asia/Singapore" },
 ];
 
+interface SavedPerson { id: string; name: string; dob: string; gender: "male" | "female"; country: string; }
+
 export default function Home() {
   const [time, setTime] = useState(new Date());
   const [mounted, setMounted] = useState(false);
   const [weather, setWeather] = useState<{temp: number, desc: string} | null>(null);
+  const [fxRate, setFxRate] = useState<number | null>(null);
+  const [savedPeople, setSavedPeople] = useState<SavedPerson[]>([]);
+  const [currentPersonIndex, setCurrentPersonIndex] = useState(0);
+  
   const { formatString, toggleFormat, format: currentFormat } = useTimeFormat();
   const { dob } = usePreferences();
 
@@ -43,8 +49,37 @@ export default function Home() {
         }
       }).catch(e => console.log(e));
 
+    // Fetch Live Exchange Rate (USD to INR)
+    fetch("https://api.frankfurter.app/latest?from=USD&to=INR")
+      .then(res => res.json())
+      .then(data => {
+        if(data.rates?.INR) {
+          setFxRate(data.rates.INR);
+        }
+      }).catch(e => console.log(e));
+      
+    // Load people from localStorage for Age Widget slideshow
+    const peopleData = localStorage.getItem("omnitime_people");
+    if (peopleData) {
+      try {
+        const parsed = JSON.parse(peopleData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSavedPeople(parsed);
+        }
+      } catch(e) {}
+    }
+
     return () => clearInterval(interval);
   }, []);
+
+  // Slideshow effect for Age Widget
+  useEffect(() => {
+    if (savedPeople.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentPersonIndex((prev) => (prev + 1) % savedPeople.length);
+    }, 5000); // slide every 5 seconds
+    return () => clearInterval(interval);
+  }, [savedPeople.length]);
 
   if (!mounted) return null;
 
@@ -55,10 +90,18 @@ export default function Home() {
   const lunar = Lunar.fromDate(time);
   const panchang = `${lunar.getYearInGanZhi()} Year • ${lunar.getMonthInChinese()} Month • Day ${lunar.getDayInChinese()}`;
   
-  // Age Calc
+  // Age Calc (either fallback to global `dob` or use the active person from slideshow)
   let ageString = "";
-  if (dob) {
-    const dobDate = new Date(dob);
+  let activeName = "Your";
+  let activeDobStr = dob;
+  
+  if (savedPeople.length > 0) {
+    activeDobStr = savedPeople[currentPersonIndex].dob;
+    activeName = savedPeople[currentPersonIndex].name + "'s";
+  }
+
+  if (activeDobStr) {
+    const dobDate = new Date(activeDobStr);
     const diffTime = Math.abs(time.getTime() - dobDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     ageString = `${(diffDays / 365.25).toFixed(4)} yrs`;
@@ -124,7 +167,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <ArrowRightLeft className="text-green-500" size={18} />
-                  <span className="font-bold text-lg">₹83.4 / $</span>
+                  <span className="font-bold text-lg">₹{fxRate ? fxRate.toFixed(2) : "83.40"} / $</span>
                 </div>
              </div>
              <div className="text-xs font-bold text-[var(--muted-foreground)] mt-2 uppercase tracking-wider">
@@ -157,11 +200,20 @@ export default function Home() {
         {/* Age Widget (Spans 4 cols on lg) */}
         <div className="glass-panel p-5 flex flex-col justify-between relative overflow-hidden group lg:col-span-4 md:col-span-2 col-span-1">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity"><Moon size={80}/></div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">Your Journey</h3>
-          {dob ? (
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2 flex items-center justify-between">
+            <span>{activeName} Journey</span>
+            {savedPeople.length > 1 && (
+              <span className="flex gap-1">
+                {savedPeople.map((_, i) => (
+                  <span key={i} className={`h-1.5 rounded-full transition-all ${i === currentPersonIndex ? 'w-3 bg-primary' : 'w-1.5 bg-primary/20'}`} />
+                ))}
+              </span>
+            )}
+          </h3>
+          {activeDobStr ? (
             <div className="mt-auto">
               <div className="text-3xl font-black font-mono bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-red-500">{ageString}</div>
-              <div className="text-[10px] uppercase font-bold text-[var(--muted-foreground)] mt-1">Time elapsed since {format(new Date(dob), "MMM d, yyyy")}</div>
+              <div className="text-[10px] uppercase font-bold text-[var(--muted-foreground)] mt-1">Time elapsed since {format(new Date(activeDobStr), "MMM d, yyyy")}</div>
             </div>
           ) : (
             <div className="mt-auto flex flex-col items-start">

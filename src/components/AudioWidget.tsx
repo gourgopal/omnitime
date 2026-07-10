@@ -6,7 +6,7 @@ import { Music, Music3, Play, Pause, Volume2, VolumeX } from "lucide-react";
 export default function AudioWidget() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Free Lofi Radio (Lofi Girl or similar creative commons stream)

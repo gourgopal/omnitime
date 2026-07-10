@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useEV } from "@/components/ev-provider";
 import { 
   BatteryCharging, 
   Zap, 
@@ -57,11 +58,19 @@ export default function EVChargingCalculator() {
   // Advanced Settings State
   const [showAdvanced, setShowAdvanced] = useState(false);
   
-  // Simulation State
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [simSoc, setSimSoc] = useState<number>(10);
-  const [chargeHistory, setChargeHistory] = useState<ChargeHistoryItem[]>([]);
+  const { 
+    isSimulating, 
+    isPaused, 
+    simSoc, 
+    chargeHistory,
+    setChargeHistory,
+    startSimulation, 
+    stopSimulation, 
+    pauseSimulation, 
+    resumeSimulation,
+    clearHistory
+  } = useEV();
+
   const [showHistory, setShowHistory] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -169,104 +178,20 @@ export default function EVChargingCalculator() {
 
   const result = calculateTime();
 
-  useEffect(() => {
-    const saved = localStorage.getItem('evChargeHistory');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved).map((item: any) => ({
-          ...item,
-          date: new Date(item.date)
-        }));
-        setChargeHistory(parsed);
-      } catch (e) {}
-    }
-  }, []);
-
-  useEffect(() => {
-    if (chargeHistory.length > 0) {
-      localStorage.setItem('evChargeHistory', JSON.stringify(chargeHistory));
-    }
-  }, [chargeHistory]);
-
-  const postToSW = (type: string, payload: any = {}) => {
-    if (typeof window !== "undefined" && navigator.serviceWorker) {
-      navigator.serviceWorker.ready.then(reg => {
-        if (reg.active) {
-          reg.active.postMessage({ type, payload });
-        }
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
-    
-    const handleMessage = (event: MessageEvent) => {
-      const { type, payload } = event.data;
-      if (type === 'SYNC_STATE') {
-        setIsSimulating(payload.isSimulating);
-        setIsPaused(payload.isPaused);
-        if (payload.currentSoc !== undefined) setSimSoc(payload.currentSoc);
-      } else if (type === 'PROGRESS') {
-        setSimSoc(payload.currentSoc);
-      } else if (type === 'STOPPED') {
-        setIsSimulating(false);
-        setIsPaused(false);
-        setSimSoc(payload.finalSoc);
-        window.dispatchEvent(new CustomEvent('stop-music'));
-        
-        if (payload.startSoc < payload.finalSoc) {
-          setChargeHistory(prev => [{
-            id: Date.now().toString(),
-            date: new Date(),
-            startSoc: payload.startSoc,
-            endSoc: payload.finalSoc,
-            cost: payload.cost,
-            energy: payload.energy,
-            timeMins: payload.timeMins,
-            rangeGained: payload.rangeGained
-          }, ...prev]);
-          if (payload.reason !== 'COMPLETED' && payload.finalSoc <= endSoc) {
-             setStartSoc(payload.finalSoc);
-          }
-        }
-      } else if (type === 'PAUSED') {
-        setIsPaused(true);
-      } else if (type === 'RESUMED') {
-        setIsPaused(false);
-      }
-    };
-    
-    navigator.serviceWorker.addEventListener('message', handleMessage);
-    postToSW('SYNC');
-    
-    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
-  }, [endSoc]);
-
-  const toggleSimulation = async () => {
+  const toggleSimulation = () => {
     if (isSimulating) {
-      postToSW('STOP');
+      stopSimulation();
       return;
     }
 
     if (!result) return;
-
-    if (typeof window !== "undefined" && "Notification" in window) {
-      if (Notification.permission !== "granted") {
-        await Notification.requestPermission();
-      }
-    }
-
-    setIsSimulating(true);
-    setIsPaused(false);
-    setSimSoc(startSoc);
     
     const totalMs = result.totalHours * 3600 * 1000;
     let baseInterval = totalMs / (endSoc - startSoc);
     if (isNaN(baseInterval) || !isFinite(baseInterval)) baseInterval = 1000;
     const intervalSpeed = Math.max(10, baseInterval / simSpeed);
 
-    postToSW('START', {
+    startSimulation({
       startSoc,
       endSoc,
       capacity,
@@ -277,14 +202,13 @@ export default function EVChargingCalculator() {
       currency,
       intervalSpeed
     });
-    window.dispatchEvent(new CustomEvent('play-music'));
   };
 
   const togglePause = () => {
     if (isPaused) {
-      postToSW('RESUME');
+      resumeSimulation();
     } else {
-      postToSW('PAUSE');
+      pauseSimulation();
     }
   };
 

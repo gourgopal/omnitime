@@ -112,7 +112,8 @@ self.addEventListener('message', (event) => {
       broadcast('SYNC_STATE', {
         isSimulating: true,
         isPaused,
-        currentSoc: simState.currentSoc
+        currentSoc: simState.currentSoc,
+        payload: simState
       });
     } else {
       broadcast('SYNC_STATE', { isSimulating: false, isPaused: false });

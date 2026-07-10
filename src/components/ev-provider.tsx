@@ -171,7 +171,7 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
 
   const stopSimulation = () => {
     setSimSoc(currentSoc => {
-      setActiveSession(session => {
+      setActiveSession((session: any) => {
         handleStop("USER_STOPPED", currentSoc, session);
         return null;
       });

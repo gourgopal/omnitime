@@ -13,6 +13,10 @@ export default function EVChargingCalculator() {
   const [efficiency, setEfficiency] = useState<number>(90);
   const [curveType, setCurveType] = useState<"conservative" | "aggressive" | "linear">("conservative");
 
+  // Advanced State
+  const [whPerKm, setWhPerKm] = useState<number>(154);
+  const [simSpeed, setSimSpeed] = useState<number>(1);
+
   // Economics
   const [costPerKwh, setCostPerKwh] = useState<number>(8);
   const [currency, setCurrency] = useState<string>("₹");
@@ -62,6 +66,7 @@ export default function EVChargingCalculator() {
     if (car) {
       setCapacity(car.capacity);
       setCustomRange(car.range);
+      setWhPerKm(Math.round((car.capacity * 1000) / car.range));
     }
     setIsDropdownOpen(false);
     setSearchQuery("");
@@ -159,10 +164,11 @@ export default function EVChargingCalculator() {
     let currentSoc = startSoc;
     const targetSoc = endSoc;
     
-    // Total hours to simulate. We'll map this so that full charge takes ~30 seconds of simulation.
-    // So 1 hour of real charging = roughly X seconds in simulation.
-    // Instead, we just increase SoC by 1% every interval, adjusting interval speed.
-    const intervalSpeed = 500; // ms per tick
+    // Total hours to simulate.
+    const totalMs = result.totalHours * 3600 * 1000;
+    let baseInterval = totalMs / (endSoc - startSoc);
+    if (isNaN(baseInterval) || !isFinite(baseInterval)) baseInterval = 1000;
+    const intervalSpeed = Math.max(10, baseInterval / simSpeed);
 
     simIntervalRef.current = setInterval(() => {
       currentSoc += 1;
@@ -175,7 +181,7 @@ export default function EVChargingCalculator() {
           const currentCost = (energyUsedSoFar * costPerKwh).toFixed(2);
           
           new Notification(`Charging: ${currentSoc}%`, {
-            body: `Cost Incurred: ${currency}${currentCost}\nRange Gained: Math.round(..)\nPowering up...`,
+            body: `Cost Incurred: ${currency}${currentCost}\nRange Gained: +${Math.round(((currentSoc - startSoc) / 100) * customRange)}km\nPowering up...`,
             icon: "/favicon.ico"
           });
         }
@@ -302,7 +308,11 @@ export default function EVChargingCalculator() {
                     <input
                       type="number"
                       value={customRange}
-                      onChange={(e) => setCustomRange(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setCustomRange(val);
+                        if (val > 0) setWhPerKm(Math.round((capacity * 1000) / val));
+                      }}
                       className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                     />
                 </div>
@@ -413,6 +423,23 @@ export default function EVChargingCalculator() {
                 </div>
               </div>
 
+              <div className="pt-4 border-t border-[var(--glass-border)]">
+                 <label className="block text-sm font-medium mb-2">Efficiency (Wh/km)</label>
+                 <div className="flex gap-4 items-center">
+                    <input
+                      type="number"
+                      value={whPerKm}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setWhPerKm(val);
+                        if (val > 0) setCustomRange(Math.round((capacity * 1000) / val));
+                      }}
+                      className="w-1/2 p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                    />
+                    <span className="text-xs text-[var(--muted-foreground)] flex-1">Auto-syncs with Max Range. E.g. Nexon EV Max is ~97 Wh/km.</span>
+                 </div>
+              </div>
+
               {result && (
                 <div className="mt-8 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm flex gap-3">
                   <Info className="shrink-0 text-blue-500 h-5 w-5" />
@@ -432,7 +459,44 @@ export default function EVChargingCalculator() {
 
         {/* Right Column: Results Dashboard */}
         <div className="lg:col-span-5">
-          {result ? (
+          {isSimulating ? (
+            <div className="glass-panel p-6 lg:p-8 sticky top-24 flex flex-col h-full min-h-[500px] space-y-8 bg-black/90 text-white border-primary/50 relative overflow-hidden ring-1 ring-primary/50 shadow-[0_0_50px_rgba(var(--primary-rgb),0.1)]">
+               <div className="absolute inset-0 bg-primary/5 animate-pulse"></div>
+               <div className="relative z-10 flex flex-col h-full items-center justify-center space-y-8">
+                  <h2 className="text-2xl font-bold flex items-center gap-2 text-primary">
+                    <BatteryCharging className="w-8 h-8 animate-pulse" /> Live Charging
+                  </h2>
+                  
+                  <div className="text-8xl font-black font-mono tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary to-blue-400">
+                     {simSoc}%
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-6 w-full mt-8">
+                     <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md text-center border border-white/10">
+                        <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Range Gained</p>
+                        <p className="text-2xl font-bold font-mono">+{Math.round(((simSoc - startSoc) / 100) * customRange)} km</p>
+                     </div>
+                     <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md text-center border border-white/10">
+                        <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Current Speed</p>
+                        <p className="text-2xl font-bold font-mono">{chargerKw} kW</p>
+                     </div>
+                     <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md text-center border border-white/10 col-span-2">
+                        <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Estimated Cost</p>
+                        <p className="text-2xl font-bold font-mono text-red-400">{currency}{(((simSoc - startSoc) / 100) * capacity / (efficiency/100) * costPerKwh).toFixed(2)}</p>
+                     </div>
+                  </div>
+                  
+                  <div className="flex-grow" />
+                  
+                  <button 
+                    onClick={toggleSimulation}
+                    className="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white transition-all shadow-[0_0_20px_rgba(239,68,68,0.4)]"
+                  >
+                    <StopCircle className="w-6 h-6 animate-pulse" /> Stop Simulation
+                  </button>
+               </div>
+            </div>
+          ) : result ? (
             <div className="glass-panel p-6 lg:p-8 sticky top-24 flex flex-col h-full space-y-8">
               
               {/* Primary Time Result */}
@@ -497,20 +561,27 @@ export default function EVChargingCalculator() {
 
               <div className="flex-grow" />
 
-              <button 
-                onClick={toggleSimulation}
-                className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
-                  isSimulating 
-                    ? 'bg-red-500/20 text-red-500 border border-red-500 hover:bg-red-500/30' 
-                    : 'bg-primary text-primary-foreground hover:opacity-90 shadow-lg shadow-primary/25 hover:shadow-primary/40'
-                }`}
-              >
-                {isSimulating ? (
-                  <><StopCircle className="w-6 h-6 animate-pulse" /> Stop Simulation</>
-                ) : (
-                  <><PlayCircle className="w-6 h-6" /> Simulate Charging Now</>
-                )}
-              </button>
+              <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-[var(--glass-border)]">
+                <div className="flex justify-between items-center px-1">
+                   <label className="text-sm font-medium text-[var(--muted-foreground)]">Simulation Speed</label>
+                   <select 
+                     value={simSpeed}
+                     onChange={(e) => setSimSpeed(Number(e.target.value))}
+                     className="bg-[var(--background)]/50 border border-[var(--glass-border)] rounded-md text-sm p-1.5 outline-none focus:ring-1 focus:ring-primary font-mono"
+                   >
+                     <option value={1}>1x (Real-Time)</option>
+                     <option value={60}>60x (Fast)</option>
+                     <option value={1000}>1000x (Ultra)</option>
+                     <option value={10000}>10000x (Instant)</option>
+                   </select>
+                </div>
+                <button 
+                  onClick={toggleSimulation}
+                  className="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all bg-primary text-primary-foreground hover:opacity-90 shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_25px_rgba(var(--primary-rgb),0.5)]"
+                >
+                  <PlayCircle className="w-6 h-6" /> Simulate Charging Now
+                </button>
+              </div>
 
             </div>
           ) : (

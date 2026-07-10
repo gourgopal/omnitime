@@ -192,7 +192,7 @@ export default function WorldClock() {
                       strokeWidth={0.5}
                       onClick={() => handleCountryClick(countryName)}
                       className={isClickable ? "cursor-pointer" : ""}
-                      title={isClickable ? `${countryName} - ${currentTime} (${mappedTz})` : countryName}
+                      {...({ title: isClickable ? `${countryName} - ${currentTime} (${mappedTz})` : countryName } as any)}
                       style={{
                         default: { outline: "none" },
                         hover: { fill: isClickable ? (theme === "dark" ? "#3b82f6" : "#60a5fa") : (theme === "dark" ? "#475569" : "#cbd5e1"), outline: "none" },

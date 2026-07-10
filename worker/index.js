@@ -18,13 +18,18 @@ function broadcast(type, payload) {
 }
 
 function sendSimNotification(title, body, actions = []) {
-  self.registration.showNotification(title, {
-    body,
-    icon: '/favicon.ico',
-    tag: 'ev-charging',
-    renotify: true,
-    actions
-  });
+  try {
+    if (self.Notification && self.Notification.permission !== 'granted') return;
+    self.registration.showNotification(title, {
+      body,
+      icon: '/favicon.ico',
+      tag: 'ev-charging',
+      renotify: true,
+      actions
+    }).catch(e => console.error("Notification promise rejected", e));
+  } catch (e) {
+    console.error("Failed to show notification", e);
+  }
 }
 
 function tick() {

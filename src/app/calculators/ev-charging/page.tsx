@@ -6,6 +6,7 @@ import { EV_CARS, EVCar } from "@/lib/ev-cars";
 
 export default function EVChargingCalculator() {
   const [capacity, setCapacity] = useState<number>(40.5);
+  const [customRange, setCustomRange] = useState<number>(263);
   const [startSoc, setStartSoc] = useState<number>(10);
   const [endSoc, setEndSoc] = useState<number>(100);
   const [chargerKw, setChargerKw] = useState<number>(7.2);
@@ -57,6 +58,7 @@ export default function EVChargingCalculator() {
     setSelectedCar(car);
     if (car) {
       setCapacity(car.capacity);
+      setCustomRange(car.range);
     }
     setIsDropdownOpen(false);
     setSearchQuery("");
@@ -109,8 +111,7 @@ export default function EVChargingCalculator() {
     const totalCost = energyRequiredGrid * costPerKwh;
     
     // Range calculations
-    const defaultRange = capacity * 6.5; 
-    const carRange = selectedCar?.range || defaultRange;
+    const carRange = customRange;
     const rangeGained = carRange * ((endSoc - startSoc) / 100);
     
     // ICE Savings
@@ -223,11 +224,11 @@ export default function EVChargingCalculator() {
         <div className="lg:col-span-7 space-y-6">
           
           {/* Vehicle Details */}
-          <div className="glass-panel p-6">
+          <div className="glass-panel p-6 relative z-50">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Zap className="text-primary w-5 h-5"/> Vehicle Details</h2>
             
             <div className="space-y-4">
-              <div>
+              <div className="relative z-50">
                 <label className="block text-sm text-[var(--muted-foreground)] mb-1">Select Vehicle Model</label>
                 <div className="relative" ref={dropdownRef}>
                   <button 
@@ -296,9 +297,10 @@ export default function EVChargingCalculator() {
                 <div>
                    <label className="block text-sm font-medium mb-1">Max Range (km)</label>
                     <input
-                      type="number" disabled
-                      value={selectedCar?.range || Math.round(capacity * 6.5)}
-                      className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/30 opacity-70 outline-none cursor-not-allowed"
+                      type="number"
+                      value={customRange}
+                      onChange={(e) => setCustomRange(parseFloat(e.target.value) || 0)}
+                      className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                     />
                 </div>
               </div>

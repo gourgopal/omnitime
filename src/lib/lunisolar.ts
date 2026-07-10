@@ -1,5 +1,6 @@
 // @ts-ignore
 import { Lunar, Solar } from 'lunar-javascript';
+import { getVedicPanchang } from './vedic';
 
 export interface LunisolarInfo {
   yearZodiac: string;
@@ -94,6 +95,16 @@ export function getMonthlyLunisolarEvents(year: number, month: number) {
         name: f
       });
     });
+
+    // Check Vedic Panchang for Ekadashi
+    const vedic = getVedicPanchang(d);
+    if (vedic.isEkadashi) {
+      events.push({
+        date: d,
+        type: 'vedic-festival',
+        name: 'Hari Vasara (Ekadashi)'
+      });
+    }
   }
   
   return events;

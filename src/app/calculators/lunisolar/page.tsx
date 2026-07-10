@@ -102,9 +102,13 @@ export default function LunisolarCalculator() {
               <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:bg-[var(--background)] transition-colors">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    event.type === 'festival' ? 'bg-red-500/10 text-red-500' : 'bg-green-500/10 text-green-500'
+                    event.type === 'festival' ? 'bg-red-500/10 text-red-500' : 
+                    event.type === 'vedic-festival' ? 'bg-amber-500/20 text-amber-500' :
+                    'bg-green-500/10 text-green-500'
                   }`}>
-                    {event.type === 'festival' ? <Star className="w-6 h-6" /> : <Sparkles className="w-6 h-6" />}
+                    {event.type === 'festival' ? <Star className="w-6 h-6" /> : 
+                     event.type === 'vedic-festival' ? <Sparkles className="w-6 h-6 animate-pulse" /> :
+                     <Sparkles className="w-6 h-6" />}
                   </div>
                   <div>
                     <h3 className="font-bold text-lg">{event.name}</h3>

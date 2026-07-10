@@ -6,6 +6,7 @@ import { Heart, Sparkles, Gift, BatteryMedium, Plus, Trash2, Crown, Edit2, Check
 import { LIFESPAN_DATA, calculateLifespan } from "@/lib/lifespan";
 import { getAstrologyChart } from "@/lib/astrology";
 import { getLifePathNumber, getLifePathMeaning } from "@/lib/numerology";
+import { useNotifications } from "@/components/notification-provider";
 
 interface SavedPerson { id: string; name: string; dob: string; gender: "male" | "female"; country: string; }
 interface SavedItem { id: string; name: string; date: string; }
@@ -33,8 +34,7 @@ export default function FunCalculators() {
   const [savedRels, setSavedRels] = useState<SavedItem[]>([]);
   const [savedCounts, setSavedCounts] = useState<SavedItem[]>([]); // manual countdowns
   
-  // Notification State
-  const [notifGranted, setNotifGranted] = useState(false);
+  const { notifGranted, triggerModalWithContext, setIsModalOpen } = useNotifications();
 
   // Input States
   const [inputName, setInputName] = useState("");
@@ -49,10 +49,6 @@ export default function FunCalculators() {
   useEffect(() => {
     setMounted(true);
     
-    if ("Notification" in window) {
-      setNotifGranted(Notification.permission === "granted");
-    }
-
     // Data Migration & Loading
     let peopleStr = localStorage.getItem("omnitime_people");
     if (!peopleStr) {
@@ -63,7 +59,7 @@ export default function FunCalculators() {
       const mappedLifespans = lifespans.map((l: any) => ({ id: l.id, name: l.name, dob: l.dob, gender: l.gender, country: l.country }));
       
       const allPeople = [...mappedLifespans, ...mappedAges];
-      const uniquePeople = allPeople.filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i);
+      const uniquePeople = allPeople.filter((v,i,a)=>a.findIndex((t:any)=>(t.name === v.name))===i);
       
       localStorage.setItem("omnitime_people", JSON.stringify(uniquePeople));
       peopleStr = JSON.stringify(uniquePeople);
@@ -73,43 +69,6 @@ export default function FunCalculators() {
     setSavedRels(JSON.parse(localStorage.getItem("omnitime_rels") || "[]"));
     setSavedCounts(JSON.parse(localStorage.getItem("omnitime_counts") || "[]"));
   }, []);
-
-  // Sync Check for Notifications
-  useEffect(() => {
-    if (!mounted || !notifGranted) return;
-    const lastCheck = localStorage.getItem("omnitime_last_notif");
-    const now = new Date().getTime();
-    if (lastCheck && now - parseInt(lastCheck) < 12 * 60 * 60 * 1000) return; // Only notify once every 12h max
-    
-    const allEvents = getUnifiedCountdowns();
-    let fired = false;
-    
-    allEvents.forEach(c => {
-      const days = differenceInDays(new Date(c.date), new Date());
-      if ([15, 7, 3, 1, 0].includes(days)) {
-         new Notification("OmniTime Reminder", {
-            body: `${c.name} is ${days === 0 ? 'Today!' : `in ${days} days!`}`,
-            icon: "/favicon.ico"
-         });
-         fired = true;
-      }
-    });
-
-    if (fired) {
-      localStorage.setItem("omnitime_last_notif", now.toString());
-    }
-  }, [mounted, notifGranted, savedPeople, savedRels, savedCounts]);
-
-  const requestNotification = () => {
-    if ("Notification" in window) {
-      Notification.requestPermission().then(perm => {
-        setNotifGranted(perm === "granted");
-        if (perm === "granted") {
-          new Notification("OmniTime Notifications Enabled!", { body: "You will now receive alerts for upcoming countdowns." });
-        }
-      });
-    }
-  };
 
   const getUnifiedCountdowns = (): CountdownItem[] => {
     const autoBdays: CountdownItem[] = savedPeople.map(p => ({
@@ -130,6 +89,7 @@ export default function FunCalculators() {
     const newList: SavedPerson[] = [...savedPeople, { id: generateId(), name: inputName || "Unnamed", dob: inputDate, gender: inputGender, country: inputCountry }];
     setSavedPeople(newList); 
     localStorage.setItem("omnitime_people", JSON.stringify(newList));
+    triggerModalWithContext("birthdays");
     resetForm();
   };
 
@@ -138,6 +98,7 @@ export default function FunCalculators() {
     const newList = [...savedRels, { id: generateId(), name: inputName || "Relationship", date: inputDate }];
     setSavedRels(newList); 
     localStorage.setItem("omnitime_rels", JSON.stringify(newList));
+    triggerModalWithContext("birthdays");
     resetForm();
   };
 
@@ -146,6 +107,7 @@ export default function FunCalculators() {
     const newList = [...savedCounts, { id: generateId(), name: inputName || "Event", date: inputDate }];
     setSavedCounts(newList); 
     localStorage.setItem("omnitime_counts", JSON.stringify(newList));
+    triggerModalWithContext("birthdays");
     resetForm();
   };
 
@@ -200,10 +162,10 @@ export default function FunCalculators() {
         
         {/* Browser Notifications Toggle */}
         <button 
-          onClick={notifGranted ? undefined : requestNotification}
+          onClick={() => setIsModalOpen(true)}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${notifGranted ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20' : 'bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:border-primary text-[var(--foreground)]'}`}
         >
-          {notifGranted ? <><BellRing className="w-4 h-4" /> Alerts Enabled</> : <><BellOff className="w-4 h-4" /> Enable Event Alerts</>}
+          {notifGranted ? <><BellRing className="w-4 h-4" /> Edit Smart Alerts</> : <><BellOff className="w-4 h-4" /> Enable Smart Alerts</>}
         </button>
       </div>
 

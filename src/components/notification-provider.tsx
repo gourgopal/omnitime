@@ -1,0 +1,174 @@
+"use client";
+
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { format, differenceInDays } from "date-fns";
+import { NotificationModal } from "./notification-modal";
+
+export type NotificationPrefs = {
+  birthdays: boolean;
+  daily: boolean;
+  spiritual: boolean;
+};
+
+interface NotificationContextType {
+  notifGranted: boolean;
+  prefs: NotificationPrefs;
+  updatePrefs: (newPrefs: Partial<NotificationPrefs>) => void;
+  requestPermission: (onGranted?: () => void) => void;
+  triggerModalWithContext: (context: keyof NotificationPrefs) => void;
+  setIsModalOpen: (open: boolean) => void;
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  const [notifGranted, setNotifGranted] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [prefs, setPrefs] = useState<NotificationPrefs>({
+    birthdays: true,
+    daily: false,
+    spiritual: false,
+  });
+
+  useEffect(() => {
+    setMounted(true);
+    if ("Notification" in window) {
+      setNotifGranted(Notification.permission === "granted");
+    }
+    const savedPrefs = localStorage.getItem("omnitime_notif_prefs");
+    if (savedPrefs) {
+      setPrefs(JSON.parse(savedPrefs));
+    }
+  }, []);
+
+  const updatePrefs = (newPrefs: Partial<NotificationPrefs>) => {
+    const updated = { ...prefs, ...newPrefs };
+    setPrefs(updated);
+    localStorage.setItem("omnitime_notif_prefs", JSON.stringify(updated));
+  };
+
+  const requestPermission = (onGranted?: () => void) => {
+    if ("Notification" in window) {
+      Notification.requestPermission().then(perm => {
+        setNotifGranted(perm === "granted");
+        if (perm === "granted") {
+          new Notification("OmniTime Notifications Enabled!", { body: "Your preferences have been saved." });
+          if (onGranted) onGranted();
+        }
+      });
+    }
+  };
+
+  const triggerModalWithContext = (context: keyof NotificationPrefs) => {
+    updatePrefs({ [context]: true });
+    if (Notification.permission !== "granted") {
+      setIsModalOpen(true);
+    }
+  };
+
+  // Background Check Engine
+  useEffect(() => {
+    if (!mounted || !notifGranted) return;
+
+    const checkInterval = setInterval(() => {
+      const now = new Date();
+      
+      // 1. Daily Morning Notification (After 8 AM)
+      if (prefs.daily && now.getHours() >= 8) {
+        const todayStr = format(now, "yyyy-MM-dd");
+        const lastDaily = localStorage.getItem("omnitime_last_daily");
+        
+        if (lastDaily !== todayStr) {
+          // Fetch Joke of the Day
+          fetch("https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun?blacklistFlags=nsfw,religious,political,racist,sexist,explicit&type=single")
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.joke) {
+                new Notification(`Good Morning! Today is ${format(now, "do MMM yyyy")}`, {
+                  body: data.joke,
+                  icon: "/favicon.ico"
+                });
+                localStorage.setItem("omnitime_last_daily", todayStr);
+              }
+            })
+            .catch(err => console.error("Failed to fetch daily joke", err));
+        }
+      }
+
+      // 2. Countdowns & Birthdays (Check once every 12 hours)
+      if (prefs.birthdays) {
+         const lastEventCheck = localStorage.getItem("omnitime_last_event_check");
+         const nowTime = now.getTime();
+         if (!lastEventCheck || nowTime - parseInt(lastEventCheck) > 12 * 60 * 60 * 1000) {
+            
+            // Re-read storage
+            const people = JSON.parse(localStorage.getItem("omnitime_people") || "[]");
+            const rels = JSON.parse(localStorage.getItem("omnitime_rels") || "[]");
+            const counts = JSON.parse(localStorage.getItem("omnitime_counts") || "[]");
+            
+            const getNextOccurrence = (dateStr: string) => {
+               const d = new Date(dateStr);
+               const n = new Date();
+               n.setHours(0,0,0,0);
+               const cy = new Date(n.getFullYear(), d.getMonth(), d.getDate());
+               return cy < n ? new Date(n.getFullYear() + 1, d.getMonth(), d.getDate()) : cy;
+            };
+
+            const allEvents = [
+              ...people.map((p: any) => ({ name: `${p.name}'s Birthday`, date: getNextOccurrence(p.dob) })),
+              ...rels.map((r: any) => ({ name: `${r.name} Anniversary`, date: getNextOccurrence(r.date) })),
+              ...counts.map((c: any) => ({ name: c.name, date: new Date(c.date) }))
+            ];
+
+            let fired = false;
+            allEvents.forEach(e => {
+              const days = differenceInDays(e.date, new Date());
+              if ([15, 7, 3, 1, 0].includes(days)) {
+                new Notification("OmniTime Reminder", {
+                   body: `${e.name} is ${days === 0 ? 'Today!' : `in ${days} days!`}`,
+                   icon: "/favicon.ico"
+                });
+                fired = true;
+              }
+            });
+
+            if (fired) {
+              localStorage.setItem("omnitime_last_event_check", nowTime.toString());
+            }
+         }
+      }
+
+    }, 60 * 1000); // Check every minute, but internal logic gates it
+
+    return () => clearInterval(checkInterval);
+  }, [mounted, notifGranted, prefs]);
+
+  return (
+    <NotificationContext.Provider value={{ notifGranted, prefs, updatePrefs, requestPermission, triggerModalWithContext, setIsModalOpen }}>
+      {children}
+      
+      {/* Notification Modal */}
+      {isModalOpen && (
+        <NotificationModal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          prefs={prefs}
+          updatePrefs={updatePrefs}
+          onRequestPermission={() => {
+            requestPermission(() => setIsModalOpen(false));
+          }}
+        />
+      )}
+    </NotificationContext.Provider>
+  );
+}
+
+export function useNotifications() {
+  const context = useContext(NotificationContext);
+  if (context === undefined) {
+    throw new Error("useNotifications must be used within a NotificationProvider");
+  }
+  return context;
+}

@@ -215,7 +215,7 @@ export default function WorldClock() {
                     r={isSelected ? 6 : 4} 
                     fill={isSelected ? "#3b82f6" : (theme === "dark" ? "#94a3b8" : "#64748b")} 
                     className="cursor-pointer transition-all hover:scale-125"
-                    title={`${city.name} (${city.timezone})`}
+                    {...({ title: `${city.name} (${city.timezone})` } as any)}
                   />
                   <text
                     textAnchor="middle"

@@ -1,3 +1,4 @@
+// @ts-ignore
 import { Lunar, Solar } from 'lunar-javascript';
 
 export interface LunisolarInfo {

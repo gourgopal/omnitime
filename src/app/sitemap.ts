@@ -1,44 +1,29 @@
-import { MetadataRoute } from 'next'
- 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://omnitime.com' // Replace with actual domain when deployed
+import { MetadataRoute } from "next";
 
-  return [
-    {
-      url: `${baseUrl}`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/calculators/date`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/fun`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/utilities`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/explore`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/astronomy`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-  ]
+export default function sitemap(): MetadataRoute.Sitemap {
+  const baseUrl = "https://omnitime.co";
+
+  const routes = [
+    '',
+    '/world-clock',
+    '/calculators',
+    '/calculators/date',
+    '/calculators/ev-charging',
+    '/calculators/astronomy',
+    '/calculators/lunisolar',
+    '/calculators/abrahamic',
+    '/calculators/astrology',
+    '/fun',
+    '/astronomy',
+    '/explore',
+    '/utilities',
+    '/sitemap',
+  ];
+
+  return routes.map((route) => ({
+    url: `${baseUrl}${route}`,
+    lastModified: new Date(),
+    changeFrequency: "daily",
+    priority: route === "" ? 1 : 0.8,
+  }));
 }

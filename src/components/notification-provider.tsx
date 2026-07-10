@@ -6,7 +6,10 @@ import { NotificationModal } from "./notification-modal";
 
 export type NotificationPrefs = {
   birthdays: boolean;
-  daily: boolean;
+  dailyWeather: boolean;
+  dailyForex: boolean;
+  dailyMotivation: boolean;
+  dailyJoke: boolean;
   spiritual: boolean;
 };
 
@@ -28,7 +31,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   
   const [prefs, setPrefs] = useState<NotificationPrefs>({
     birthdays: true,
-    daily: false,
+    dailyWeather: false,
+    dailyForex: false,
+    dailyMotivation: false,
+    dailyJoke: false,
     spiritual: false,
   });
 
@@ -75,28 +81,78 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const checkInterval = setInterval(() => {
       const now = new Date();
       
-      // 1. Daily Morning Notification (After 8 AM)
-      if (prefs.daily && now.getHours() >= 8) {
+      // 1. Daily Notifications (After 8 AM)
+      if (now.getHours() >= 8) {
         const todayStr = format(now, "yyyy-MM-dd");
-        const lastDaily = localStorage.getItem("omnitime_last_daily");
         
-        if (lastDaily !== todayStr) {
-          // Fetch Motivational Quote
+        // Multi-notification Engine
+        const greetings = ["Explorer", "Time Traveler", "Captain", "Trailblazer", "Legend", "Friend", "Visionary", "Achiever"];
+        const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+        
+        // Weather
+        if (prefs.dailyWeather && localStorage.getItem("omnitime_last_weather") !== todayStr) {
+          const locStr = localStorage.getItem("omnitime_location");
+          if (locStr) {
+            try {
+              const loc = JSON.parse(locStr);
+              fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,weather_code`)
+                .then(r => r.json())
+                .then(d => {
+                  if (d && d.current) {
+                    new Notification(`Weather Update, ${greeting} 🌤️`, {
+                      body: `${d.current.temperature_2m}°C currently in ${loc.city || loc.country_name || 'your area'}.`,
+                      icon: "/icon-192x192.png"
+                    });
+                    localStorage.setItem("omnitime_last_weather", todayStr);
+                  }
+                });
+            } catch(e) {}
+          }
+        }
+        
+        // Forex
+        if (prefs.dailyForex && localStorage.getItem("omnitime_last_forex") !== todayStr) {
+          fetch("https://open.er-api.com/v6/latest/USD")
+            .then(r => r.json())
+            .then(d => {
+              if (d && d.rates && d.rates.INR && d.rates.EUR) {
+                new Notification(`Daily Forex, ${greeting} 💵`, {
+                  body: `1 USD = ${d.rates.INR} INR\n1 EUR = ${(d.rates.INR / d.rates.EUR).toFixed(2)} INR`,
+                  icon: "/icon-192x192.png"
+                });
+                localStorage.setItem("omnitime_last_forex", todayStr);
+              }
+            });
+        }
+        
+        // Motivation
+        if (prefs.dailyMotivation && localStorage.getItem("omnitime_last_motivation") !== todayStr) {
           fetch("https://dummyjson.com/quotes/random")
             .then(res => res.json())
             .then(data => {
               if (data && data.quote) {
-                const greetings = ["Explorer", "Time Traveler", "Captain", "Trailblazer", "Legend", "Friend", "Visionary", "Achiever"];
-                const greeting = greetings[Math.floor(Math.random() * greetings.length)];
-                
                 new Notification(`Good Morning, ${greeting}! 🌅`, {
                   body: `Today is ${format(now, "do MMM yyyy")}.\n\n"${data.quote}"\n- ${data.author || "Unknown"}`,
-                  icon: "/favicon.ico"
+                  icon: "/icon-192x192.png"
                 });
-                localStorage.setItem("omnitime_last_daily", todayStr);
+                localStorage.setItem("omnitime_last_motivation", todayStr);
               }
-            })
-            .catch(err => console.error("Failed to fetch daily quote", err));
+            });
+        }
+
+        // Joke
+        if (prefs.dailyJoke && localStorage.getItem("omnitime_last_joke") !== todayStr) {
+          fetch("https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun?blacklistFlags=nsfw,religious,political,racist,sexist,explicit&type=single")
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.joke) {
+                new Notification(`Joke of the Day 🤡`, {
+                  body: data.joke,
+                  icon: "/icon-192x192.png"
+                });
+                localStorage.setItem("omnitime_last_joke", todayStr);
+              }
+            });
         }
       }
 

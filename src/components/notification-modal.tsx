@@ -51,13 +51,52 @@ export function NotificationModal({ isOpen, onClose, prefs, updatePrefs, onReque
           <label className="flex items-center gap-4 p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-border)]/50 transition-colors cursor-pointer">
             <input 
               type="checkbox" 
-              checked={prefs.daily} 
-              onChange={(e) => updatePrefs({ daily: e.target.checked })}
+              checked={prefs.dailyWeather} 
+              onChange={(e) => updatePrefs({ dailyWeather: e.target.checked })}
               className="w-5 h-5 accent-primary"
             />
             <div className="flex-1">
-              <div className="font-bold flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-500"/> Daily Morning Briefing</div>
-              <div className="text-xs text-[var(--muted-foreground)]">Start your day with the date and a motivational quote</div>
+              <div className="font-bold flex items-center gap-2"><Sparkles className="w-4 h-4 text-blue-400"/> Daily Weather</div>
+              <div className="text-xs text-[var(--muted-foreground)]">Morning local weather forecast</div>
+            </div>
+          </label>
+          
+          <label className="flex items-center gap-4 p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-border)]/50 transition-colors cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={prefs.dailyForex} 
+              onChange={(e) => updatePrefs({ dailyForex: e.target.checked })}
+              className="w-5 h-5 accent-primary"
+            />
+            <div className="flex-1">
+              <div className="font-bold flex items-center gap-2"><Sparkles className="w-4 h-4 text-green-500"/> Daily Forex Rates</div>
+              <div className="text-xs text-[var(--muted-foreground)]">Morning update on USD & EUR to INR</div>
+            </div>
+          </label>
+          
+          <label className="flex items-center gap-4 p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-border)]/50 transition-colors cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={prefs.dailyMotivation} 
+              onChange={(e) => updatePrefs({ dailyMotivation: e.target.checked })}
+              className="w-5 h-5 accent-primary"
+            />
+            <div className="flex-1">
+              <div className="font-bold flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-500"/> Daily Motivation</div>
+              <div className="text-xs text-[var(--muted-foreground)]">Start your day with an inspiring quote</div>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-4 p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-border)]/50 transition-colors cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={prefs.dailyJoke} 
+              onChange={(e) => updatePrefs({ dailyJoke: e.target.checked })}
+              className="w-5 h-5 accent-primary"
+            />
+            <div className="flex-1">
+              <div className="font-bold flex items-center gap-2"><Sparkles className="w-4 h-4 text-orange-500"/> Daily Joke</div>
+              <div className="text-xs text-[var(--muted-foreground)]">Start your day with a safe joke</div>
             </div>
           </label>
 

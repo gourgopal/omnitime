@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { Clock, Moon, Sun, Menu, X, Monitor, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "@/components/location-provider";
+import { PwaInstallPrompt } from "./pwa-install-prompt";
 
 function getFlagEmoji(countryCode: string) {
   if (!countryCode) return "🌍";
@@ -55,6 +56,8 @@ export function Navbar() {
 
         <div className="flex items-center space-x-4">
           
+          <PwaInstallPrompt />
+
           {/* Location Badge */}
           {mounted && !isLoading && (
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--glass-bg)] border border-[var(--glass-border)] cursor-help" title={`Detected Location: ${location?.country_name || 'Global'}`}>

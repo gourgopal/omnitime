@@ -7,6 +7,8 @@ interface LocationData {
   country_code: string;
   timezone: string;
   currency: string;
+  latitude: number;
+  longitude: number;
 }
 
 interface LocationContextType {
@@ -42,7 +44,9 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             country_name: data.country_name,
             country_code: data.country_code,
             timezone: data.timezone,
-            currency: data.currency
+            currency: data.currency,
+            latitude: data.latitude,
+            longitude: data.longitude
           };
           setLocationState(newLoc);
           localStorage.setItem("omnitime_location", JSON.stringify(newLoc));

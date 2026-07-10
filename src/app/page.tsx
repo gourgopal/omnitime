@@ -4,10 +4,9 @@ import { useState, useEffect } from "react";
 import { format, formatInTimeZone } from "date-fns-tz";
 import { useTimeFormat } from "@/components/time-format-provider";
 import { usePreferences } from "@/components/preferences-provider";
-// @ts-ignore
-import { Lunar, Solar } from 'lunar-javascript';
 import Link from "next/link";
 import { MapPin, BatteryCharging, CalendarDays, Rocket, Sun, Moon, Sparkles, Cloud, ArrowRightLeft } from "lucide-react";
+import VedicWidget from "@/components/VedicWidget";
 
 const CITIES = [
   { name: "New York", timezone: "America/New_York" },
@@ -84,11 +83,6 @@ export default function Home() {
   if (!mounted) return null;
 
   const shortFormatString = currentFormat === "12h" ? "hh:mm a" : "HH:mm";
-  
-  // Lunar/Astrology Calc
-  const solar = Solar.fromDate(time);
-  const lunar = Lunar.fromDate(time);
-  const panchang = `${lunar.getYearInGanZhi()} Year • ${lunar.getMonthInChinese()} Month • Day ${lunar.getDayInChinese()}`;
   
   // Age Calc (either fallback to global `dob` or use the active person from slideshow)
   let ageString = "";
@@ -223,14 +217,8 @@ export default function Home() {
           )}
         </div>
 
-        {/* Cosmic Snapshot (Spans 4 cols on lg) */}
-        <div className="glass-panel p-5 flex flex-col justify-between lg:col-span-4 md:col-span-2 col-span-1">
-           <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">Cosmic Snapshot</h3>
-           <div className="mt-auto">
-             <div className="text-xl font-black tracking-tight">{lunar.getYearShengXiao()} Year</div>
-             <div className="text-sm font-semibold opacity-80 mt-1">{panchang}</div>
-           </div>
-        </div>
+        {/* Vedic Panchang & Planetary Hours (Spans 4 cols on lg) */}
+        <VedicWidget />
 
         {/* Tools Dock (Spans 8 cols on lg) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:col-span-8 md:col-span-4 col-span-1">

@@ -73,7 +73,7 @@ export default function AudioWidget() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-[999] animate-in slide-in-from-bottom-4 fade-in">
+    <div className="animate-in slide-in-from-bottom-4 fade-in">
       <div className="glass-panel p-2 pr-4 rounded-full flex items-center gap-3 shadow-lg shadow-black/20 border border-[var(--glass-border)] bg-[var(--card-bg)]/80 backdrop-blur-xl">
         <button 
           onClick={togglePlay}

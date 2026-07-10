@@ -13,11 +13,15 @@ export type ChargeHistoryItem = {
   rangeGained: number;
 };
 
+export type CompletedSummary = ChargeHistoryItem | null;
+
 type EVContextType = {
   isSimulating: boolean;
   isPaused: boolean;
   simSoc: number;
   chargeHistory: ChargeHistoryItem[];
+  completedSummary: CompletedSummary;
+  setCompletedSummary: React.Dispatch<React.SetStateAction<CompletedSummary>>;
   setChargeHistory: React.Dispatch<React.SetStateAction<ChargeHistoryItem[]>>;
   startSimulation: (payload: any) => void;
   stopSimulation: () => void;
@@ -33,6 +37,7 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
   const [isPaused, setIsPaused] = useState(false);
   const [simSoc, setSimSoc] = useState(10);
   const [chargeHistory, setChargeHistory] = useState<ChargeHistoryItem[]>([]);
+  const [completedSummary, setCompletedSummary] = useState<CompletedSummary>(null);
   
   const [activeSession, setActiveSession] = useState<any>(null);
   
@@ -154,7 +159,7 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
     );
     
     if (finalSoc > session.startSoc) {
-      setChargeHistory(prev => [{
+      const historyItem: ChargeHistoryItem = {
          id: Date.now().toString(),
          date: new Date(),
          startSoc: session.startSoc,
@@ -163,7 +168,12 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
          energy: math.energyUsedSoFar.toFixed(1),
          timeMins: math.mins,
          rangeGained: math.rangeGained
-      }, ...prev]);
+      };
+      setChargeHistory(prev => [historyItem, ...prev]);
+      
+      if (reason === "COMPLETED") {
+        setCompletedSummary(historyItem);
+      }
     }
     
     setActiveSession(null);
@@ -229,6 +239,8 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
       isPaused,
       simSoc,
       chargeHistory,
+      completedSummary,
+      setCompletedSummary,
       setChargeHistory,
       startSimulation,
       stopSimulation,

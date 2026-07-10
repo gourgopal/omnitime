@@ -587,9 +587,50 @@ export default function EVChargingCalculator() {
                 )}
               </div>
 
+              {/* EV Insights - Educational Space Fill */}
+              {showAdvanced && (
+                <div className="bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl overflow-hidden animate-in fade-in slide-in-from-top-4">
+                  <div className="bg-primary/10 p-3 border-b border-[var(--glass-border)]">
+                     <h3 className="font-semibold text-primary flex items-center gap-2 text-sm">
+                       <Info className="w-4 h-4" /> Deep Insights & Comparisons
+                     </h3>
+                  </div>
+                  <div className="p-4 space-y-4 text-sm text-[var(--muted-foreground)]">
+                     
+                     <div className="space-y-2">
+                       <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Efficiency Impact (Wh/km)</p>
+                       <p>Your vehicle consumes {whPerKm} Wh/km. At this rate, gaining 100km of range requires {(whPerKm * 100 / 1000).toFixed(1)} kWh of battery energy.</p>
+                       <p className="text-xs">Aggressive driving or AC use can push this to {Math.round(whPerKm * 1.3)} Wh/km, reducing your max range to {Math.round((capacity * 1000) / (whPerKm * 1.3))} km.</p>
+                     </div>
+
+                     <div className="space-y-2 pt-2">
+                       <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Charging Speeds (0-100%)</p>
+                       <ul className="space-y-1 text-xs font-mono">
+                         <li className="flex justify-between"><span>3.3kW (Portable AC):</span> <span>{Math.round(capacity / 3.3 * (100/efficiency))} hrs</span></li>
+                         <li className="flex justify-between"><span>7.2kW (Wallbox AC):</span> <span>{Math.round(capacity / 7.2 * (100/efficiency))} hrs</span></li>
+                         <li className="flex justify-between text-blue-400"><span>50kW (DC Fast):</span> <span>{Math.round(capacity / 50 * (100/efficiency) * 60)} mins</span></li>
+                       </ul>
+                     </div>
+
+                     <div className="space-y-2 pt-2">
+                       <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Battery Technology</p>
+                       <p className="text-xs">Most modern EVs use <strong>LFP (Lithium Iron Phosphate)</strong> batteries like BYD Blade or Tata Nexon. LFP is safer and can be charged to 100% regularly without significant degradation. <strong>NMC/NCA</strong> batteries (used in some premium EVs) charge faster but should ideally be kept between 20-80% for daily use.</p>
+                     </div>
+
+                     <div className="space-y-2 pt-2">
+                       <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Degradation Estimate</p>
+                       <p className="text-xs">Assuming standard LFP chemistry (~3000 cycles to 80% capacity):</p>
+                       <p className="text-xs">Lifespan: <strong>{Math.round(3000 * customRange).toLocaleString()} km</strong> before dropping to {Math.round(capacity * 0.8)} kWh capacity.</p>
+                     </div>
+
+                  </div>
+                </div>
+              )}
+
+
               <div className="flex-grow" />
 
-              <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-[var(--glass-border)]">
+              <div className="fixed md:static bottom-0 left-0 right-0 z-50 md:z-auto bg-background/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none border-t border-[var(--glass-border)] md:border-t p-4 md:p-0 mt-4 md:pt-4 flex flex-col gap-3 shadow-[0_-10px_30px_rgba(0,0,0,0.3)] md:shadow-none">
                 <div className="flex justify-between items-center px-1">
                    <label className="text-sm font-medium text-[var(--muted-foreground)]">Simulation Speed</label>
                    <div className="flex gap-4 items-center">

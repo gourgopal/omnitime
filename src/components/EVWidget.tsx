@@ -13,7 +13,7 @@ export default function EVWidget() {
   if (!isSimulating || pathname === '/calculators/ev-charging') return null;
 
   return (
-    <div className="fixed bottom-20 left-4 z-[999] animate-in slide-in-from-bottom-4 fade-in">
+    <div className="animate-in slide-in-from-bottom-4 fade-in">
       <div 
         className="glass-panel p-3 pr-4 rounded-full flex items-center gap-4 shadow-lg shadow-black/20 border border-primary/20 bg-[var(--card-bg)]/90 backdrop-blur-xl cursor-pointer hover:border-primary/50 transition-colors"
         onClick={() => router.push('/calculators/ev-charging')}

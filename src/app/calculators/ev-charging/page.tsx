@@ -146,6 +146,22 @@ export default function EVChargingCalculator() {
     if (isSimulating) {
       if (simIntervalRef.current) clearInterval(simIntervalRef.current);
       setIsSimulating(false);
+      
+      // Stop Notification
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted" && simSoc > startSoc) {
+          const energyUsedSoFar = ((simSoc - startSoc) / 100) * capacity / (efficiency/100);
+          const currentCost = (energyUsedSoFar * costPerKwh).toFixed(2);
+          const rangeGained = Math.round(((simSoc - startSoc) / 100) * customRange);
+          const effectiveKw = chargerKw * (efficiency / 100);
+          const timeHrs = energyUsedSoFar / effectiveKw;
+          const mins = Math.round(timeHrs * 60);
+
+          new Notification(`Charging Stopped 🛑`, {
+            body: `Stopped at ${simSoc}%.\nAdded: +${rangeGained}km in ~${mins} mins\nCost: ${currency}${currentCost}`,
+            icon: "/favicon.ico",
+            tag: "ev-charging"
+          });
+      }
       return;
     }
 
@@ -182,7 +198,9 @@ export default function EVChargingCalculator() {
           
           new Notification(`Charging: ${currentSoc}%`, {
             body: `Cost Incurred: ${currency}${currentCost}\nRange Gained: +${Math.round(((currentSoc - startSoc) / 100) * customRange)}km\nPowering up...`,
-            icon: "/favicon.ico"
+            icon: "/favicon.ico",
+            tag: "ev-charging",
+            renotify: true
           });
         }
       }
@@ -193,7 +211,9 @@ export default function EVChargingCalculator() {
         if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
            new Notification(`Charging Complete! 🔋`, {
             body: `Reached ${targetSoc}% SoC. Total Cost: ${currency}${result.totalCost.toFixed(2)}`,
-            icon: "/favicon.ico"
+            icon: "/favicon.ico",
+            tag: "ev-charging",
+            renotify: true
           });
         }
       }

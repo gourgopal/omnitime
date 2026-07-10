@@ -24,6 +24,9 @@ export default function EVChargingCalculator() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCar, setSelectedCar] = useState<EVCar | null>(null);
   
+  // Advanced Settings State
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  
   // Simulation State
   const [isSimulating, setIsSimulating] = useState(false);
   const [simSoc, setSimSoc] = useState<number>(10);
@@ -373,6 +376,58 @@ export default function EVChargingCalculator() {
             </div>
           </div>
           
+          {/* Advanced Options Toggle */}
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--card-bg)] text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+          >
+            {showAdvanced ? "Hide Advanced Options" : "Show Advanced Options"}
+          </button>
+          
+          {showAdvanced && (
+            <div className="glass-panel p-6 space-y-6 animate-in slide-in-from-top-4 fade-in">
+              <div>
+                <label className="block text-sm font-medium mb-2">Charging Curve / Taper</label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)] transition-colors">
+                    <input type="radio" checked={curveType === "conservative"} onChange={() => setCurveType("conservative")} className="text-primary" />
+                    <div>
+                      <span className="font-semibold block">Conservative (e.g., Tata EZ Charge)</span>
+                      <span className="text-[var(--muted-foreground)] text-xs">Slows at 80%, drops heavily at 90%</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)] transition-colors">
+                    <input type="radio" checked={curveType === "aggressive"} onChange={() => setCurveType("aggressive")} className="text-primary" />
+                    <div>
+                      <span className="font-semibold block">Aggressive (e.g., Relux)</span>
+                      <span className="text-[var(--muted-foreground)] text-xs">Full speed until 95%, then slows</span>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm p-2 rounded border border-[var(--glass-border)] hover:bg-[var(--glass-border)] transition-colors">
+                    <input type="radio" checked={curveType === "linear"} onChange={() => setCurveType("linear")} className="text-primary" />
+                    <div>
+                      <span className="font-semibold block">Linear (Home AC)</span>
+                      <span className="text-[var(--muted-foreground)] text-xs">Constant speed, ignores tapering</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {result && (
+                <div className="mt-8 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm flex gap-3">
+                  <Info className="shrink-0 text-blue-500 h-5 w-5" />
+                  <div className="text-[var(--muted-foreground)]">
+                    <h4 className="font-semibold text-blue-500 mb-1">Power Loss Physics</h4>
+                    <p>
+                      Total battery energy required is <strong>{(((endSoc - startSoc) / 100) * capacity).toFixed(1)} kWh</strong>. 
+                      Due to {100 - efficiency}% efficiency loss (heat, AC conversion, battery conditioning), you will actually pull <strong>{(((endSoc - startSoc) / 100 * capacity) / (efficiency/100)).toFixed(1)} kWh</strong> from the grid to complete this charge.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
 
         {/* Right Column: Results Dashboard */}
@@ -392,6 +447,21 @@ export default function EVChargingCalculator() {
                   <span className="text-xl font-medium mb-2 text-[var(--muted-foreground)]">m</span>
                 </div>
               </div>
+
+              {/* Charging Timeline */}
+              {showAdvanced && (
+                <div className="space-y-4 animate-in fade-in">
+                  <h3 className="font-medium text-sm text-[var(--muted-foreground)] uppercase tracking-wider">Charging Timeline</h3>
+                  {result.phases.map((phase, i) => (
+                    <div key={i} className="flex justify-between items-center border-b border-[var(--glass-border)] pb-2 last:border-0">
+                      <span className="font-medium">{phase.name}</span>
+                      <span className="font-mono bg-[var(--background)] px-2 py-1 rounded text-sm">
+                        {Math.floor(phase.time)}h {Math.round((phase.time - Math.floor(phase.time)) * 60)}m
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                  <div className="bg-[var(--card-bg)] border border-[var(--glass-border)] p-4 rounded-xl">

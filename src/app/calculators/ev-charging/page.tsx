@@ -125,14 +125,14 @@ export default function EVChargingCalculator() {
                   </button>
                   
                   {isDropdownOpen && (
-                    <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl shadow-xl overflow-hidden max-h-72 flex flex-col">
-                      <div className="p-2 border-b border-[var(--glass-border)]">
+                    <div className="absolute z-10 top-full left-0 right-0 mt-2 bg-background/90 backdrop-blur-2xl border border-[var(--glass-border)] rounded-xl shadow-2xl overflow-hidden max-h-72 flex flex-col ring-1 ring-primary/20">
+                      <div className="p-2 border-b border-[var(--glass-border)] bg-background/50">
                         <div className="relative">
                           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                           <input 
                             type="text" 
                             placeholder="Search Make or Model..."
-                            className="w-full bg-background border border-input rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            className="w-full bg-background/50 border border-input rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             autoFocus

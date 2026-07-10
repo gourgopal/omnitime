@@ -162,6 +162,11 @@ export default function EVChargingCalculator() {
             tag: "ev-charging"
           });
       }
+      
+      if (simSoc > startSoc && simSoc < endSoc) {
+         setStartSoc(simSoc);
+      }
+      
       return;
     }
 
@@ -460,6 +465,19 @@ export default function EVChargingCalculator() {
                  </div>
               </div>
 
+              <div className="pt-4 border-t border-[var(--glass-border)]">
+                 <label className="block text-sm font-medium mb-2">Charging Efficiency (%)</label>
+                 <div className="flex gap-4 items-center">
+                    <input
+                      type="number" min="10" max="100"
+                      value={efficiency}
+                      onChange={(e) => setEfficiency(parseFloat(e.target.value) || 0)}
+                      className="w-1/2 p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
+                    />
+                    <span className="text-xs text-[var(--muted-foreground)] flex-1">Accounts for energy lost to heat and battery conditioning. Default is 90% (10% loss).</span>
+                 </div>
+              </div>
+
               {result && (
                 <div className="mt-8 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm flex gap-3">
                   <Info className="shrink-0 text-blue-500 h-5 w-5" />
@@ -467,7 +485,7 @@ export default function EVChargingCalculator() {
                     <h4 className="font-semibold text-blue-500 mb-1">Power Loss Physics</h4>
                     <p>
                       Total battery energy required is <strong>{(((endSoc - startSoc) / 100) * capacity).toFixed(1)} kWh</strong>. 
-                      Due to {100 - efficiency}% efficiency loss (heat, AC conversion, battery conditioning), you will actually pull <strong>{(((endSoc - startSoc) / 100 * capacity) / (efficiency/100)).toFixed(1)} kWh</strong> from the grid to complete this charge.
+                      Due to {100 - efficiency}% efficiency loss, you will actually pull <strong>{(((endSoc - startSoc) / 100 * capacity) / (efficiency/100)).toFixed(1)} kWh</strong> from the grid to complete this charge.
                     </p>
                   </div>
                 </div>

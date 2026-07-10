@@ -57,7 +57,7 @@ export function NotificationModal({ isOpen, onClose, prefs, updatePrefs, onReque
             />
             <div className="flex-1">
               <div className="font-bold flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-500"/> Daily Morning Briefing</div>
-              <div className="text-xs text-[var(--muted-foreground)]">Start your day with the date and a fresh joke/quote</div>
+              <div className="text-xs text-[var(--muted-foreground)]">Start your day with the date and a motivational quote</div>
             </div>
           </label>
 

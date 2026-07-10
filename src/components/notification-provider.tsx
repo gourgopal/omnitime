@@ -81,19 +81,22 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const lastDaily = localStorage.getItem("omnitime_last_daily");
         
         if (lastDaily !== todayStr) {
-          // Fetch Joke of the Day
-          fetch("https://v2.jokeapi.dev/joke/Programming,Miscellaneous,Pun?blacklistFlags=nsfw,religious,political,racist,sexist,explicit&type=single")
+          // Fetch Motivational Quote
+          fetch("https://dummyjson.com/quotes/random")
             .then(res => res.json())
             .then(data => {
-              if (data && data.joke) {
-                new Notification(`Good Morning! Today is ${format(now, "do MMM yyyy")}`, {
-                  body: data.joke,
+              if (data && data.quote) {
+                const greetings = ["Explorer", "Time Traveler", "Captain", "Trailblazer", "Legend", "Friend", "Visionary", "Achiever"];
+                const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+                
+                new Notification(`Good Morning, ${greeting}! 🌅`, {
+                  body: `Today is ${format(now, "do MMM yyyy")}.\n\n"${data.quote}"\n- ${data.author || "Unknown"}`,
                   icon: "/favicon.ico"
                 });
                 localStorage.setItem("omnitime_last_daily", todayStr);
               }
             })
-            .catch(err => console.error("Failed to fetch daily joke", err));
+            .catch(err => console.error("Failed to fetch daily quote", err));
         }
       }
 

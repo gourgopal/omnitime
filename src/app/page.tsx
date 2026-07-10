@@ -65,17 +65,14 @@ export default function Home() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 h-full flex flex-col justify-center max-w-7xl" style={{ minHeight: "calc(100vh - 8rem)" }}>
+    <div className="container mx-auto px-4 py-4 h-full flex flex-col justify-center max-w-7xl" style={{ minHeight: "calc(100vh - 8rem)" }}>
       
       {/* Header Row */}
-      <div className="flex justify-between items-end mb-6">
+      <div className="flex justify-between items-end mb-4">
         <div>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 dark:to-blue-400">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 dark:to-blue-400">
             OmniTime
           </h1>
-          <p className="text-sm md:text-base text-[var(--muted-foreground)] mt-1">
-            Your single pane of glass for time, life, and the universe.
-          </p>
         </div>
         <button 
           onClick={toggleFormat}
@@ -85,141 +82,140 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 flex-1">
+      {/* Main Dashboard Bento Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-4 flex-1 auto-rows-min">
         
-        {/* Core Time - Left Column (Cols 1-8) */}
-        <div className="md:col-span-8 flex flex-col gap-4">
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-48">
-            {/* Local Time Widget */}
-            <div className="glass-panel p-6 flex flex-col justify-center items-center relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-2 relative z-10">Local Time</h2>
-              <div className="text-5xl md:text-6xl font-bold font-mono tracking-tighter text-primary relative z-10">
-                {format(time, formatString)}
-              </div>
-              <div className="text-sm mt-2 font-medium relative z-10">
-                {format(time, "EEEE, MMMM do")}
-              </div>
-            </div>
-
-            {/* UTC Widget */}
-            <div className="glass-panel p-6 flex flex-col justify-center items-center relative overflow-hidden group">
-               <div className="absolute inset-0 bg-gradient-to-bl from-green-500/10 to-teal-500/10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-2 relative z-10">UTC</h2>
-              <div className="text-5xl md:text-6xl font-bold font-mono tracking-tighter relative z-10">
-                {formatInTimeZone(time, "UTC", formatString)}
-              </div>
-              <div className="text-sm mt-2 font-medium relative z-10">
-                {formatInTimeZone(time, "UTC", "EEEE, MMMM do")}
-              </div>
-            </div>
+        {/* Core Time - Local (Spans 4 cols on lg) */}
+        <div className="glass-panel p-6 flex flex-col justify-center relative overflow-hidden group lg:col-span-4 md:col-span-2 col-span-1 min-h-[160px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1 relative z-10 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span> Local Time
+          </h2>
+          <div className="text-4xl md:text-5xl font-black font-mono tracking-tighter text-primary relative z-10 whitespace-nowrap">
+            {format(time, formatString)}
           </div>
+          <div className="text-xs mt-1 font-medium relative z-10 opacity-70">
+            {format(time, "EEEE, MMMM do")}
+          </div>
+        </div>
 
-          {/* Compact Trending Cities */}
-          <div className="glass-panel p-4 flex flex-col justify-center">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Global Pulse</h3>
-              <Link href="/world-clock" className="text-xs text-primary hover:underline">Interactive Map &rarr;</Link>
-            </div>
-            <div className="flex overflow-x-auto pb-2 gap-6 snap-x hide-scrollbar">
-              {CITIES.map((city) => (
-                <div key={city.name} className="flex-none snap-start group cursor-pointer border-l-2 border-transparent hover:border-primary pl-2 transition-all">
-                  <div className="text-xs text-[var(--muted-foreground)] font-medium mb-0.5">{city.name}</div>
-                  <div className="text-lg font-bold font-mono group-hover:text-primary transition-colors">
-                    {formatInTimeZone(time, city.timezone, shortFormatString)}
-                  </div>
+        {/* Core Time - UTC (Spans 4 cols on lg) */}
+        <div className="glass-panel p-6 flex flex-col justify-center relative overflow-hidden group lg:col-span-4 md:col-span-2 col-span-1 min-h-[160px]">
+           <div className="absolute inset-0 bg-gradient-to-bl from-green-500/10 to-teal-500/10 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-1 relative z-10 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> UTC Time
+          </h2>
+          <div className="text-4xl md:text-5xl font-black font-mono tracking-tighter relative z-10 whitespace-nowrap">
+            {formatInTimeZone(time, "UTC", formatString)}
+          </div>
+          <div className="text-xs mt-1 font-medium relative z-10 opacity-70">
+            {formatInTimeZone(time, "UTC", "EEEE, MMMM do")}
+          </div>
+        </div>
+
+        {/* Environment / Weather (Spans 4 cols on lg) */}
+        <div className="glass-panel p-6 flex flex-col justify-center lg:col-span-4 md:col-span-2 col-span-1 min-h-[160px] relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-32 h-32 bg-blue-500/5 rounded-bl-full -z-10"></div>
+          <div className="flex flex-col h-full justify-between">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Cloud className="text-blue-400" size={24} />
+                  <span className="text-2xl font-black">{weather ? `${weather.temp}°C` : "--°C"}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ArrowRightLeft className="text-green-500" size={18} />
+                  <span className="font-bold text-lg">₹83.4 / $</span>
+                </div>
+             </div>
+             <div className="text-xs font-bold text-[var(--muted-foreground)] mt-2 uppercase tracking-wider">
+               Weather ({weather?.desc || "Loading"}) & Markets
+             </div>
+          </div>
+        </div>
+
+        {/* Global Pulse Ticker (Spans 8 cols on lg) */}
+        <div className="glass-panel p-4 flex flex-col justify-center lg:col-span-8 md:col-span-4 col-span-1 overflow-hidden relative">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] flex items-center gap-2">
+              <Sparkles className="w-3 h-3 text-yellow-500" /> Global Pulse
+            </h3>
+            <Link href="/world-clock" className="text-xs font-bold text-primary hover:underline">View Map &rarr;</Link>
+          </div>
+          {/* Custom auto-scrolling marquee wrapper */}
+          <div className="relative w-full overflow-hidden flex hide-scrollbar">
+            <div className="flex gap-8 whitespace-nowrap animate-[marquee_25s_linear_infinite] hover:[animation-play-state:paused]">
+              {[...CITIES, ...CITIES].map((city, idx) => (
+                <div key={city.name + idx} className="inline-flex flex-col border-l-2 border-[var(--glass-border)] hover:border-primary pl-3 transition-colors cursor-crosshair">
+                  <span className="text-[10px] text-[var(--muted-foreground)] font-bold uppercase tracking-wider">{city.name}</span>
+                  <span className="text-base font-black font-mono">{formatInTimeZone(time, city.timezone, shortFormatString)}</span>
                 </div>
               ))}
             </div>
           </div>
-
         </div>
 
-        {/* Life Widgets - Right Column (Cols 9-12) */}
-        <div className="md:col-span-4 flex flex-col gap-4">
-           
-           {/* Age Widget */}
-           <div className="glass-panel p-5 flex flex-col justify-between flex-1 relative overflow-hidden group">
-             <div className="absolute top-0 right-0 p-4 opacity-10"><Sparkles size={64}/></div>
-             <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Your Journey</h3>
-             {dob ? (
-               <div className="mt-auto">
-                 <div className="text-4xl font-bold font-mono">{ageString}</div>
-                 <div className="text-xs text-[var(--muted-foreground)] mt-1">Time elapsed since {format(new Date(dob), "MMM d, yyyy")}</div>
-               </div>
-             ) : (
-               <div className="mt-auto flex flex-col items-start">
-                 <p className="text-sm mb-3">Set your birthdate to track your exact age down to the millisecond.</p>
-                 <Link href="/fun" className="px-3 py-1.5 text-xs font-semibold bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors">Setup Profile</Link>
-               </div>
-             )}
-           </div>
+        {/* Age Widget (Spans 4 cols on lg) */}
+        <div className="glass-panel p-5 flex flex-col justify-between relative overflow-hidden group lg:col-span-4 md:col-span-2 col-span-1">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity"><Moon size={80}/></div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">Your Journey</h3>
+          {dob ? (
+            <div className="mt-auto">
+              <div className="text-3xl font-black font-mono bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-red-500">{ageString}</div>
+              <div className="text-[10px] uppercase font-bold text-[var(--muted-foreground)] mt-1">Time elapsed since {format(new Date(dob), "MMM d, yyyy")}</div>
+            </div>
+          ) : (
+            <div className="mt-auto flex flex-col items-start">
+              <p className="text-xs font-medium mb-3">Set your birthdate to track your exact age down to the millisecond.</p>
+              <Link href="/fun" className="px-3 py-1.5 text-[10px] uppercase font-black bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors">Setup Profile</Link>
+            </div>
+          )}
+        </div>
 
-           {/* Environment Widget */}
-           <div className="glass-panel p-5 flex flex-col justify-between flex-1">
-             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Cloud className="text-blue-400" size={18} />
-                  <span className="font-bold">{weather ? `${weather.temp}°C` : "--°C"}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ArrowRightLeft className="text-green-500" size={18} />
-                  <span className="font-bold">₹83.4 / $</span>
-                </div>
-             </div>
-             <div className="text-xs text-[var(--muted-foreground)] mt-2">Live Weather ({weather?.desc || "Loading"}) & Markets</div>
+        {/* Cosmic Snapshot (Spans 4 cols on lg) */}
+        <div className="glass-panel p-5 flex flex-col justify-between lg:col-span-4 md:col-span-2 col-span-1">
+           <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">Cosmic Snapshot</h3>
+           <div className="mt-auto">
+             <div className="text-xl font-black tracking-tight">{lunar.getYearShengXiao()} Year</div>
+             <div className="text-sm font-semibold opacity-80 mt-1">{panchang}</div>
            </div>
+        </div>
 
-           {/* Astro Widget */}
-           <div className="glass-panel p-5 flex flex-col justify-between flex-1">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-[var(--muted-foreground)] mb-2">Cosmic Snapshot</h3>
-              <div>
-                <div className="font-bold">{lunar.getYearShengXiao()} Year</div>
-                <div className="text-sm font-medium mt-1">{panchang}</div>
-              </div>
-           </div>
-
+        {/* Tools Dock (Spans 8 cols on lg) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 lg:col-span-8 md:col-span-4 col-span-1">
+          <Link href="/calculators/ev-charging" className="glass-panel p-4 flex flex-col items-center justify-center gap-2 hover:bg-[var(--glass-bg)] hover:-translate-y-1 transition-all group border border-transparent hover:border-green-500/30">
+            <div className="p-3 bg-green-500/10 rounded-2xl text-green-500 group-hover:scale-110 transition-transform"><BatteryCharging size={24}/></div>
+            <div className="text-center">
+              <div className="font-bold text-sm">EV Engine</div>
+              <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">Charge & Range</div>
+            </div>
+          </Link>
+          
+          <Link href="/calculators/date" className="glass-panel p-4 flex flex-col items-center justify-center gap-2 hover:bg-[var(--glass-bg)] hover:-translate-y-1 transition-all group border border-transparent hover:border-blue-500/30">
+            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500 group-hover:scale-110 transition-transform"><CalendarDays size={24}/></div>
+            <div className="text-center">
+              <div className="font-bold text-sm">Date Calc</div>
+              <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">Add, Sub, Diff</div>
+            </div>
+          </Link>
+          
+          <Link href="/world-clock" className="glass-panel p-4 flex flex-col items-center justify-center gap-2 hover:bg-[var(--glass-bg)] hover:-translate-y-1 transition-all group border border-transparent hover:border-purple-500/30">
+            <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-500 group-hover:scale-110 transition-transform"><MapPin size={24}/></div>
+            <div className="text-center">
+              <div className="font-bold text-sm">World Map</div>
+              <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">Live Timezones</div>
+            </div>
+          </Link>
+          
+          <Link href="/explore" className="glass-panel p-4 flex flex-col items-center justify-center gap-2 hover:bg-[var(--glass-bg)] hover:-translate-y-1 transition-all group border border-transparent hover:border-amber-500/30">
+            <div className="p-3 bg-amber-500/10 rounded-2xl text-amber-500 group-hover:scale-110 transition-transform"><Rocket size={24}/></div>
+            <div className="text-center">
+              <div className="font-bold text-sm">Explore</div>
+              <div className="text-[10px] uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">All Utilities</div>
+            </div>
+          </Link>
         </div>
 
       </div>
-
-      {/* Main Tools Dock */}
-      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link href="/calculators/ev-charging" className="glass-panel p-4 flex items-center gap-3 hover:bg-[var(--glass-bg)] hover:scale-[1.02] transition-all group border border-transparent hover:border-green-500/30">
-          <div className="p-2 bg-green-500/10 rounded-lg text-green-500"><BatteryCharging size={20}/></div>
-          <div>
-            <div className="font-semibold text-sm">EV Engine</div>
-            <div className="text-xs text-[var(--muted-foreground)]">Charge & Range</div>
-          </div>
-        </Link>
-        
-        <Link href="/calculators/date" className="glass-panel p-4 flex items-center gap-3 hover:bg-[var(--glass-bg)] hover:scale-[1.02] transition-all group border border-transparent hover:border-blue-500/30">
-          <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500"><CalendarDays size={20}/></div>
-          <div>
-            <div className="font-semibold text-sm">Date Calc</div>
-            <div className="text-xs text-[var(--muted-foreground)]">Add, Sub, Diff</div>
-          </div>
-        </Link>
-        
-        <Link href="/world-clock" className="glass-panel p-4 flex items-center gap-3 hover:bg-[var(--glass-bg)] hover:scale-[1.02] transition-all group border border-transparent hover:border-purple-500/30">
-          <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500"><MapPin size={20}/></div>
-          <div>
-            <div className="font-semibold text-sm">World Map</div>
-            <div className="text-xs text-[var(--muted-foreground)]">Live Timezones</div>
-          </div>
-        </Link>
-        
-        <Link href="/explore" className="glass-panel p-4 flex items-center gap-3 hover:bg-[var(--glass-bg)] hover:scale-[1.02] transition-all group border border-transparent hover:border-amber-500/30">
-          <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500"><Rocket size={20}/></div>
-          <div>
-            <div className="font-semibold text-sm">Explore</div>
-            <div className="text-xs text-[var(--muted-foreground)]">All Utilities</div>
-          </div>
-        </Link>
-      </div>
-
     </div>
   );
 }

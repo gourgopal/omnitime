@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
 export type ChargeHistoryItem = {
   id: string;
@@ -35,9 +35,13 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
   const [chargeHistory, setChargeHistory] = useState<ChargeHistoryItem[]>([]);
   
   const [activeSession, setActiveSession] = useState<any>(null);
+  
+  // Native interval refs
+  const simIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastNotificationRef = useRef<number>(0);
 
   useEffect(() => {
-    const saved = localStorage.getItem('evChargeHistory');
+    const saved = localStorage.getItem("evChargeHistory");
     if (saved) {
       try {
         const parsed = JSON.parse(saved).map((item: any) => ({
@@ -51,135 +55,173 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (chargeHistory.length > 0) {
-      localStorage.setItem('evChargeHistory', JSON.stringify(chargeHistory));
+      localStorage.setItem("evChargeHistory", JSON.stringify(chargeHistory));
     }
   }, [chargeHistory]);
 
-  const postToSW = (type: string, payload: any = {}) => {
-    if (typeof window !== "undefined" && navigator.serviceWorker) {
-      if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type, payload });
-      } else {
-        navigator.serviceWorker.ready.then(reg => {
-          if (reg.active) {
-            reg.active.postMessage({ type, payload });
-          }
+  const sendNativeNotification = (title: string, body: string) => {
+    try {
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        new Notification(title, {
+          body,
+          icon: "/favicon.ico",
         });
       }
+    } catch (e) {
+      console.warn("Notification failed", e);
     }
   };
 
-  useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+  const calculateFinalMath = (finalSoc: number, session: any) => {
+    const startSoc = session.startSoc;
+    const capacity = session.capacity;
+    const efficiency = session.efficiency;
+    const customRange = session.customRange;
+    const chargerKw = session.chargerKw;
+    const costPerKwh = session.costPerKwh;
     
-    const handleMessage = (event: MessageEvent) => {
-      const { type, payload } = event.data;
-      if (type === 'SYNC_STATE') {
-        setIsSimulating(payload.isSimulating);
-        setIsPaused(payload.isPaused);
-        if (payload.currentSoc !== undefined) setSimSoc(payload.currentSoc);
-        if (payload.payload) setActiveSession(payload.payload); // Sync active payload too
-      } else if (type === 'PROGRESS') {
-        setSimSoc(payload.currentSoc);
-      } else if (type === 'STOPPED') {
-        setIsSimulating(false);
-        setIsPaused(false);
-        setSimSoc(payload.finalSoc);
-        window.dispatchEvent(new CustomEvent('stop-music'));
-        
-        setActiveSession((currentSession: any) => {
-          if (currentSession && currentSession.startSoc < payload.finalSoc) {
-             const startSoc = currentSession.startSoc;
-             const finalSoc = payload.finalSoc;
-             const capacity = currentSession.capacity;
-             const efficiency = currentSession.efficiency;
-             const customRange = currentSession.customRange;
-             const chargerKw = currentSession.chargerKw;
-             const costPerKwh = currentSession.costPerKwh;
-             
-             const energyUsedSoFar = ((finalSoc - startSoc) / 100) * capacity / (efficiency/100);
-             const currentCost = (energyUsedSoFar * costPerKwh).toFixed(2);
-             const rangeGained = Math.round(((finalSoc - startSoc) / 100) * customRange);
-             const effectiveKw = chargerKw * (efficiency / 100);
-             const timeHrs = energyUsedSoFar / effectiveKw;
-             const mins = Math.round(timeHrs * 60);
-             
-             setChargeHistory(prev => [{
-                id: Date.now().toString(),
-                date: new Date(),
-                startSoc,
-                endSoc: finalSoc,
-                cost: currentCost,
-                energy: energyUsedSoFar.toFixed(1),
-                timeMins: mins,
-                rangeGained
-             }, ...prev]);
-          }
-          return null; 
-        });
-      } else if (type === 'PAUSED') {
-        setIsPaused(true);
-      } else if (type === 'RESUMED') {
-        setIsPaused(false);
-      }
-    };
+    const energyUsedSoFar = ((finalSoc - startSoc) / 100) * capacity / (efficiency/100);
+    const currentCost = (energyUsedSoFar * costPerKwh).toFixed(2);
+    const rangeGained = Math.round(((finalSoc - startSoc) / 100) * customRange);
+    const effectiveKw = chargerKw * (efficiency / 100);
+    const timeHrs = energyUsedSoFar / effectiveKw;
+    const mins = Math.round(timeHrs * 60);
     
-    navigator.serviceWorker.addEventListener('message', handleMessage);
-    postToSW('SYNC');
-    
-    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
-  }, []);
+    return { energyUsedSoFar, currentCost, rangeGained, mins };
+  };
 
   const startSimulation = async (payload: any) => {
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission !== "granted") {
-        try {
-          await Notification.requestPermission();
-        } catch (e) {}
+        try { await Notification.requestPermission(); } catch (e) {}
       }
     }
+    
     setIsSimulating(true);
     setIsPaused(false);
     setSimSoc(payload.startSoc);
     setActiveSession(payload);
     
-    if (typeof window !== "undefined" && navigator.serviceWorker && navigator.serviceWorker.controller) {
-      postToSW('START', payload);
-    } else {
-      // Fallback if SW is not active (like in dev mode without PWA enabled)
-      console.warn("Service worker not active. EV Simulation requires PWA Service Worker to tick.");
-      // We will simulate a quick stop to unlock the UI
-      setTimeout(() => {
-        setIsSimulating(false);
-        alert("Service Worker is not active. Please ensure PWA is enabled and refresh the page.");
-      }, 1000);
+    if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+    
+    lastNotificationRef.current = Date.now();
+    sendNativeNotification("Charging Started ⚡", `Initializing session from ${payload.startSoc}%...`);
+    window.dispatchEvent(new CustomEvent("play-music"));
+    
+    // Start native ticker
+    simIntervalRef.current = setInterval(() => {
+      setSimSoc(prevSoc => {
+        const nextSoc = prevSoc + 1;
+        
+        // Handle notifications
+        const now = Date.now();
+        if (now - lastNotificationRef.current >= 5000) {
+          lastNotificationRef.current = now;
+          const math = calculateFinalMath(nextSoc, payload);
+          sendNativeNotification(
+            `Charging: ${nextSoc}%`,
+            `Cost: ${payload.currency}${math.currentCost} • Range: +${math.rangeGained}km`
+          );
+        }
+        
+        // Handle completion
+        if (nextSoc >= payload.endSoc) {
+          if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+          handleStop("COMPLETED", nextSoc, payload);
+          return nextSoc;
+        }
+        
+        return nextSoc;
+      });
+    }, payload.intervalSpeed);
+  };
+
+  const handleStop = (reason: string, finalSoc: number, session: any) => {
+    if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+    
+    setIsSimulating(false);
+    setIsPaused(false);
+    window.dispatchEvent(new CustomEvent("stop-music"));
+    
+    if (!session) return;
+    
+    const math = calculateFinalMath(finalSoc, session);
+    
+    let title = reason === "COMPLETED" ? "Charging Complete! 🔋" : "Charging Stopped 🛑";
+    sendNativeNotification(
+      title,
+      `Reached ${finalSoc}% SoC.\nCost: ${session.currency}${math.currentCost}\nAdded: +${math.rangeGained}km in ~${math.mins} mins`
+    );
+    
+    if (finalSoc > session.startSoc) {
+      setChargeHistory(prev => [{
+         id: Date.now().toString(),
+         date: new Date(),
+         startSoc: session.startSoc,
+         endSoc: finalSoc,
+         cost: math.currentCost,
+         energy: math.energyUsedSoFar.toFixed(1),
+         timeMins: math.mins,
+         rangeGained: math.rangeGained
+      }, ...prev]);
     }
-    window.dispatchEvent(new CustomEvent('play-music'));
+    
+    setActiveSession(null);
   };
 
   const stopSimulation = () => {
-    postToSW('STOP');
-    
-    // Fallback cleanup if SW is missing
-    if (typeof window !== "undefined" && (!navigator.serviceWorker || !navigator.serviceWorker.controller)) {
-      setIsSimulating(false);
-      setIsPaused(false);
-      window.dispatchEvent(new CustomEvent('stop-music'));
-    }
+    setSimSoc(currentSoc => {
+      setActiveSession(session => {
+        handleStop("USER_STOPPED", currentSoc, session);
+        return null;
+      });
+      return currentSoc;
+    });
   };
 
   const pauseSimulation = () => {
-    postToSW('PAUSE');
+    setIsPaused(true);
+    if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+    sendNativeNotification("Charging Paused ⏸️", `Simulation paused temporarily.`);
   };
 
   const resumeSimulation = () => {
-    postToSW('RESUME');
+    if (!activeSession) return;
+    setIsPaused(false);
+    sendNativeNotification("Charging Resumed ▶️", `Simulation resumed.`);
+    
+    simIntervalRef.current = setInterval(() => {
+      setSimSoc(prevSoc => {
+        const nextSoc = prevSoc + 1;
+        const now = Date.now();
+        if (now - lastNotificationRef.current >= 5000) {
+          lastNotificationRef.current = now;
+          const math = calculateFinalMath(nextSoc, activeSession);
+          sendNativeNotification(
+            `Charging: ${nextSoc}%`,
+            `Cost: ${activeSession.currency}${math.currentCost} • Range: +${math.rangeGained}km`
+          );
+        }
+        
+        if (nextSoc >= activeSession.endSoc) {
+          if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+          handleStop("COMPLETED", nextSoc, activeSession);
+        }
+        return nextSoc;
+      });
+    }, activeSession.intervalSpeed);
   };
 
   const clearHistory = () => {
     setChargeHistory([]);
-    localStorage.removeItem('evChargeHistory');
-  }
+    localStorage.removeItem("evChargeHistory");
+  };
+
+  useEffect(() => {
+    return () => {
+      if (simIntervalRef.current) clearInterval(simIntervalRef.current);
+    };
+  }, []);
 
   return (
     <EVContext.Provider value={{

@@ -1,7 +1,22 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { BatteryCharging, Zap, Info, Search, ChevronDown, Activity, PlayCircle, StopCircle, Fuel, AlertTriangle, TrendingDown, Clock3 } from "lucide-react";
+import { 
+  BatteryCharging, 
+  Zap, 
+  Info, 
+  Search, 
+  ChevronDown, 
+  Activity, 
+  PlayCircle, 
+  StopCircle, 
+  Fuel, 
+  AlertTriangle, 
+  TrendingDown, 
+  Clock3,
+  X,
+  History
+} from "lucide-react";
 import { EV_CARS, EVCar } from "@/lib/ev-cars";
 
 type ChargeHistoryItem = {
@@ -47,6 +62,7 @@ export default function EVChargingCalculator() {
   const [isPaused, setIsPaused] = useState(false);
   const [simSoc, setSimSoc] = useState<number>(10);
   const [chargeHistory, setChargeHistory] = useState<ChargeHistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -153,9 +169,32 @@ export default function EVChargingCalculator() {
 
   const result = calculateTime();
 
+  useEffect(() => {
+    const saved = localStorage.getItem('evChargeHistory');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved).map((item: any) => ({
+          ...item,
+          date: new Date(item.date)
+        }));
+        setChargeHistory(parsed);
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (chargeHistory.length > 0) {
+      localStorage.setItem('evChargeHistory', JSON.stringify(chargeHistory));
+    }
+  }, [chargeHistory]);
+
   const postToSW = (type: string, payload: any = {}) => {
-    if (typeof window !== "undefined" && navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type, payload });
+    if (typeof window !== "undefined" && navigator.serviceWorker) {
+      navigator.serviceWorker.ready.then(reg => {
+        if (reg.active) {
+          reg.active.postMessage({ type, payload });
+        }
+      });
     }
   };
 
@@ -174,6 +213,7 @@ export default function EVChargingCalculator() {
         setIsSimulating(false);
         setIsPaused(false);
         setSimSoc(payload.finalSoc);
+        window.dispatchEvent(new CustomEvent('stop-music'));
         
         if (payload.startSoc < payload.finalSoc) {
           setChargeHistory(prev => [{
@@ -186,7 +226,9 @@ export default function EVChargingCalculator() {
             timeMins: payload.timeMins,
             rangeGained: payload.rangeGained
           }, ...prev]);
-          if (payload.finalSoc <= endSoc) setStartSoc(payload.finalSoc);
+          if (payload.reason !== 'COMPLETED' && payload.finalSoc <= endSoc) {
+             setStartSoc(payload.finalSoc);
+          }
         }
       } else if (type === 'PAUSED') {
         setIsPaused(true);
@@ -235,6 +277,7 @@ export default function EVChargingCalculator() {
       currency,
       intervalSpeed
     });
+    window.dispatchEvent(new CustomEvent('play-music'));
   };
 
   const togglePause = () => {
@@ -519,7 +562,7 @@ export default function EVChargingCalculator() {
                     <BatteryCharging className="w-8 h-8 animate-pulse" /> Live Charging
                   </h2>
                   
-                  <div className="text-8xl font-black font-mono tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-primary to-blue-400">
+                  <div className="text-8xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-primary to-blue-400 pb-2 pr-2">
                      {simSoc}%
                   </div>
                   
@@ -540,7 +583,7 @@ export default function EVChargingCalculator() {
                   
                   <div className="flex-grow" />
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4 w-full">
                     <button 
                       onClick={togglePause}
                       className="w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 transition-all"
@@ -625,16 +668,26 @@ export default function EVChargingCalculator() {
               <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-[var(--glass-border)]">
                 <div className="flex justify-between items-center px-1">
                    <label className="text-sm font-medium text-[var(--muted-foreground)]">Simulation Speed</label>
-                   <select 
-                     value={simSpeed}
-                     onChange={(e) => setSimSpeed(Number(e.target.value))}
-                     className="bg-[var(--background)]/50 border border-[var(--glass-border)] rounded-md text-sm p-1.5 outline-none focus:ring-1 focus:ring-primary font-mono"
-                   >
-                     <option value={1}>1x (Real-Time)</option>
-                     <option value={60}>60x (Fast)</option>
-                     <option value={1000}>1000x (Ultra)</option>
-                     <option value={10000}>10000x (Instant)</option>
-                   </select>
+                   <div className="flex gap-4 items-center">
+                     {chargeHistory.length > 0 && (
+                       <button 
+                         onClick={() => setShowHistory(true)}
+                         className="text-xs text-primary hover:underline flex items-center gap-1 font-semibold"
+                       >
+                         <Clock3 className="w-3 h-3" /> History
+                       </button>
+                     )}
+                     <select 
+                       value={simSpeed}
+                       onChange={(e) => setSimSpeed(Number(e.target.value))}
+                       className="bg-[var(--background)]/50 border border-[var(--glass-border)] rounded-md text-sm p-1.5 outline-none focus:ring-1 focus:ring-primary font-mono"
+                     >
+                       <option value={1}>1x (Real-Time)</option>
+                       <option value={60}>60x (Fast)</option>
+                       <option value={1000}>1000x (Ultra)</option>
+                       <option value={10000}>10000x (Instant)</option>
+                     </select>
+                   </div>
                 </div>
                 <button 
                   onClick={toggleSimulation}
@@ -651,30 +704,42 @@ export default function EVChargingCalculator() {
             </div>
           )}
           
-          {/* History Panel */}
-          {chargeHistory.length > 0 && (
-            <div className="glass-panel p-6 mt-8 animate-in fade-in">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Clock3 className="text-primary w-5 h-5"/> Session History
-              </h3>
-              <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                {chargeHistory.map(session => (
-                  <div key={session.id} className="bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-lg p-3 text-sm flex justify-between items-center hover:border-primary/50 transition-colors">
-                     <div className="flex flex-col">
-                        <span className="font-bold">{session.startSoc}% → {session.endSoc}%</span>
-                        <span className="text-[var(--muted-foreground)] text-xs">{session.date.toLocaleTimeString()} • {session.timeMins} mins</span>
-                     </div>
-                     <div className="flex flex-col items-end text-right">
-                        <span className="font-mono text-green-500 font-bold">+{session.rangeGained} km</span>
-                        <span className="text-[var(--muted-foreground)] text-xs">{currency}{session.cost} • {session.energy} kWh</span>
-                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* History Modal */}
+      {showHistory && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-[var(--background)] border border-[var(--glass-border)] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="p-4 border-b border-[var(--glass-border)] flex justify-between items-center bg-[var(--card-bg)]">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Clock3 className="text-primary w-5 h-5"/> Charging History
+              </h3>
+              <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-[var(--glass-border)] rounded-full transition-colors">
+                <X className="w-5 h-5 text-[var(--muted-foreground)] hover:text-foreground" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar flex-grow">
+              {chargeHistory.length === 0 ? (
+                <p className="text-center text-[var(--muted-foreground)] py-8">No charging sessions yet.</p>
+              ) : (
+                chargeHistory.map(session => (
+                  <div key={session.id} className="bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-xl p-4 text-sm flex justify-between items-center hover:border-primary/50 transition-colors shadow-sm">
+                     <div className="flex flex-col gap-1">
+                        <span className="font-bold text-lg">{session.startSoc}% → {session.endSoc}%</span>
+                        <span className="text-[var(--muted-foreground)] text-xs">{session.date.toLocaleDateString()} {session.date.toLocaleTimeString()} • {session.timeMins} mins</span>
+                     </div>
+                     <div className="flex flex-col items-end text-right gap-1">
+                        <span className="font-mono text-green-500 font-bold text-base">+{session.rangeGained} km</span>
+                        <span className="text-[var(--muted-foreground)] text-xs font-mono">{currency}{session.cost} • {session.energy} kWh</span>
+                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

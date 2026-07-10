@@ -8,6 +8,7 @@ import { NotificationProvider } from "@/components/notification-provider";
 import { PreferencesProvider } from "@/components/preferences-provider";
 import { Navbar } from "@/components/navbar";
 import { ShareButton } from "@/components/ShareButton";
+import AudioWidget from "@/components/AudioWidget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,6 +65,7 @@ export default function RootLayout({
                     </p>
                   </footer>
                   <ShareButton />
+                  <AudioWidget />
                 </NotificationProvider>
               </TimeFormatProvider>
             </LocationProvider>

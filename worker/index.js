@@ -88,7 +88,13 @@ self.addEventListener('message', (event) => {
     if (simInterval) clearInterval(simInterval);
     simState = { ...payload, currentSoc: payload.startSoc };
     isPaused = false;
-    lastNotificationTime = 0;
+    lastNotificationTime = Date.now();
+    
+    sendSimNotification('Charging Started ⚡', `Initializing session from ${simState.currentSoc}%...`, [
+      { action: 'pause', title: 'Pause' },
+      { action: 'stop', title: 'Stop' }
+    ]);
+    
     simInterval = setInterval(tick, payload.intervalSpeed);
   } else if (type === 'PAUSE' && simState) {
     isPaused = true;

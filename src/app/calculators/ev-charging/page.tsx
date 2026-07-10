@@ -16,7 +16,7 @@ export default function EVChargingCalculator() {
   // Economics
   const [costPerKwh, setCostPerKwh] = useState<number>(8);
   const [currency, setCurrency] = useState<string>("₹");
-  const [petrolPrice, setPetrolPrice] = useState<number>(100); // 100 per liter
+  const [petrolPrice, setPetrolPrice] = useState<number>(110); // 110 per liter
   const [iceEfficiency, setIceEfficiency] = useState<number>(15); // 15 km/l
 
   // Searchable Dropdown State

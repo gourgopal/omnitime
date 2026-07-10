@@ -204,8 +204,7 @@ export default function EVChargingCalculator() {
           new Notification(`Charging: ${currentSoc}%`, {
             body: `Cost Incurred: ${currency}${currentCost}\nRange Gained: +${Math.round(((currentSoc - startSoc) / 100) * customRange)}km\nPowering up...`,
             icon: "/favicon.ico",
-            tag: "ev-charging",
-            renotify: true
+            tag: "ev-charging"
           });
         }
       }
@@ -217,8 +216,7 @@ export default function EVChargingCalculator() {
            new Notification(`Charging Complete! 🔋`, {
             body: `Reached ${targetSoc}% SoC. Total Cost: ${currency}${result.totalCost.toFixed(2)}`,
             icon: "/favicon.ico",
-            tag: "ev-charging",
-            renotify: true
+            tag: "ev-charging"
           });
         }
       }

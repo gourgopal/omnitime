@@ -3,6 +3,14 @@ let simState = null;
 let lastNotificationTime = 0;
 let isPaused = false;
 
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 function broadcast(type, payload) {
   self.clients.matchAll().then(clients => {
     clients.forEach(client => client.postMessage({ type, payload }));

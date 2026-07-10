@@ -57,11 +57,15 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
 
   const postToSW = (type: string, payload: any = {}) => {
     if (typeof window !== "undefined" && navigator.serviceWorker) {
-      navigator.serviceWorker.ready.then(reg => {
-        if (reg.active) {
-          reg.active.postMessage({ type, payload });
-        }
-      });
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type, payload });
+      } else {
+        navigator.serviceWorker.ready.then(reg => {
+          if (reg.active) {
+            reg.active.postMessage({ type, payload });
+          }
+        });
+      }
     }
   };
 

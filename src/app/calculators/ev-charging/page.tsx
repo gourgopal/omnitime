@@ -1,8 +1,19 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { BatteryCharging, Zap, Info, Search, ChevronDown, Activity, PlayCircle, StopCircle, Fuel, AlertTriangle, TrendingDown } from "lucide-react";
+import { BatteryCharging, Zap, Info, Search, ChevronDown, Activity, PlayCircle, StopCircle, Fuel, AlertTriangle, TrendingDown, Clock3 } from "lucide-react";
 import { EV_CARS, EVCar } from "@/lib/ev-cars";
+
+type ChargeHistoryItem = {
+  id: string;
+  date: Date;
+  startSoc: number;
+  endSoc: number;
+  cost: string;
+  energy: string;
+  timeMins: number;
+  rangeGained: number;
+};
 
 export default function EVChargingCalculator() {
   const [capacity, setCapacity] = useState<number>(40.5);
@@ -34,6 +45,7 @@ export default function EVChargingCalculator() {
   // Simulation State
   const [isSimulating, setIsSimulating] = useState(false);
   const [simSoc, setSimSoc] = useState<number>(10);
+  const [chargeHistory, setChargeHistory] = useState<ChargeHistoryItem[]>([]);
   const simIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -141,14 +153,26 @@ export default function EVChargingCalculator() {
 
   const result = calculateTime();
 
+  const sendNotification = (title: string, options: NotificationOptions) => {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.showNotification(title, options);
+      }).catch(() => {
+        new Notification(title, options);
+      });
+    } else if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      new Notification(title, options);
+    }
+  };
+
   // Simulation Logic
   const toggleSimulation = async () => {
     if (isSimulating) {
       if (simIntervalRef.current) clearInterval(simIntervalRef.current);
       setIsSimulating(false);
       
-      // Stop Notification
-      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted" && simSoc > startSoc) {
+      // Stop Notification & History
+      if (simSoc > startSoc) {
           const energyUsedSoFar = ((simSoc - startSoc) / 100) * capacity / (efficiency/100);
           const currentCost = (energyUsedSoFar * costPerKwh).toFixed(2);
           const rangeGained = Math.round(((simSoc - startSoc) / 100) * customRange);
@@ -156,15 +180,28 @@ export default function EVChargingCalculator() {
           const timeHrs = energyUsedSoFar / effectiveKw;
           const mins = Math.round(timeHrs * 60);
 
-          new Notification(`Charging Stopped 🛑`, {
-            body: `Stopped at ${simSoc}%.\nAdded: +${rangeGained}km in ~${mins} mins\nCost: ${currency}${currentCost}`,
-            icon: "/favicon.ico",
-            tag: "ev-charging"
-          });
-      }
-      
-      if (simSoc > startSoc && simSoc < endSoc) {
-         setStartSoc(simSoc);
+          if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+            sendNotification(`Charging Stopped 🛑`, {
+              body: `Stopped at ${simSoc}%.\nAdded: +${rangeGained}km in ~${mins} mins\nCost: ${currency}${currentCost}`,
+              icon: "/favicon.ico",
+              tag: "ev-charging"
+            });
+          }
+          
+          setChargeHistory(prev => [{
+            id: Date.now().toString(),
+            date: new Date(),
+            startSoc,
+            endSoc: simSoc,
+            cost: currentCost,
+            energy: energyUsedSoFar.toFixed(1),
+            timeMins: mins,
+            rangeGained
+          }, ...prev]);
+          
+          if (simSoc <= endSoc) {
+             setStartSoc(simSoc);
+          }
       }
       
       return;
@@ -201,7 +238,7 @@ export default function EVChargingCalculator() {
           const energyUsedSoFar = ((currentSoc - startSoc) / 100) * capacity / (efficiency/100);
           const currentCost = (energyUsedSoFar * costPerKwh).toFixed(2);
           
-          new Notification(`Charging: ${currentSoc}%`, {
+          sendNotification(`Charging: ${currentSoc}%`, {
             body: `Cost Incurred: ${currency}${currentCost}\nRange Gained: +${Math.round(((currentSoc - startSoc) / 100) * customRange)}km\nPowering up...`,
             icon: "/favicon.ico",
             tag: "ev-charging"
@@ -213,12 +250,28 @@ export default function EVChargingCalculator() {
         if (simIntervalRef.current) clearInterval(simIntervalRef.current);
         setIsSimulating(false);
         if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-           new Notification(`Charging Complete! 🔋`, {
+           sendNotification(`Charging Complete! 🔋`, {
             body: `Reached ${targetSoc}% SoC. Total Cost: ${currency}${result.totalCost.toFixed(2)}`,
             icon: "/favicon.ico",
             tag: "ev-charging"
           });
         }
+        
+        const energyUsedSoFar = ((currentSoc - startSoc) / 100) * capacity / (efficiency/100);
+        const timeHrs = energyUsedSoFar / (chargerKw * (efficiency / 100));
+        
+        setChargeHistory(prev => [{
+            id: Date.now().toString(),
+            date: new Date(),
+            startSoc,
+            endSoc: currentSoc,
+            cost: result.totalCost.toFixed(2),
+            energy: energyUsedSoFar.toFixed(1),
+            timeMins: Math.round(timeHrs * 60),
+            rangeGained: Math.round(((currentSoc - startSoc) / 100) * customRange)
+        }, ...prev]);
+        
+        setStartSoc(currentSoc);
       }
     }, intervalSpeed);
   };
@@ -623,6 +676,29 @@ export default function EVChargingCalculator() {
           ) : (
             <div className="glass-panel p-8 flex items-center justify-center h-full min-h-[300px] text-[var(--muted-foreground)]">
               Start SoC must be less than End SoC
+            </div>
+          )}
+          
+          {/* History Panel */}
+          {chargeHistory.length > 0 && (
+            <div className="glass-panel p-6 mt-8 animate-in fade-in">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Clock3 className="text-primary w-5 h-5"/> Session History
+              </h3>
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                {chargeHistory.map(session => (
+                  <div key={session.id} className="bg-[var(--card-bg)] border border-[var(--glass-border)] rounded-lg p-3 text-sm flex justify-between items-center hover:border-primary/50 transition-colors">
+                     <div className="flex flex-col">
+                        <span className="font-bold">{session.startSoc}% → {session.endSoc}%</span>
+                        <span className="text-[var(--muted-foreground)] text-xs">{session.date.toLocaleTimeString()} • {session.timeMins} mins</span>
+                     </div>
+                     <div className="flex flex-col items-end text-right">
+                        <span className="font-mono text-green-500 font-bold">+{session.rangeGained} km</span>
+                        <span className="text-[var(--muted-foreground)] text-xs">{currency}{session.cost} • {session.energy} kWh</span>
+                     </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -133,19 +133,39 @@ export function EVProvider({ children }: { children: React.ReactNode }) {
   const startSimulation = async (payload: any) => {
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission !== "granted") {
-        await Notification.requestPermission();
+        try {
+          await Notification.requestPermission();
+        } catch (e) {}
       }
     }
     setIsSimulating(true);
     setIsPaused(false);
     setSimSoc(payload.startSoc);
     setActiveSession(payload);
-    postToSW('START', payload);
+    
+    if (typeof window !== "undefined" && navigator.serviceWorker && navigator.serviceWorker.controller) {
+      postToSW('START', payload);
+    } else {
+      // Fallback if SW is not active (like in dev mode without PWA enabled)
+      console.warn("Service worker not active. EV Simulation requires PWA Service Worker to tick.");
+      // We will simulate a quick stop to unlock the UI
+      setTimeout(() => {
+        setIsSimulating(false);
+        alert("Service Worker is not active. Please ensure PWA is enabled and refresh the page.");
+      }, 1000);
+    }
     window.dispatchEvent(new CustomEvent('play-music'));
   };
 
   const stopSimulation = () => {
     postToSW('STOP');
+    
+    // Fallback cleanup if SW is missing
+    if (typeof window !== "undefined" && (!navigator.serviceWorker || !navigator.serviceWorker.controller)) {
+      setIsSimulating(false);
+      setIsPaused(false);
+      window.dispatchEvent(new CustomEvent('stop-music'));
+    }
   };
 
   const pauseSimulation = () => {

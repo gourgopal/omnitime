@@ -1,65 +1,85 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import { format, formatInTimeZone } from "date-fns-tz";
+
+const CITIES = [
+  { name: "New York", timezone: "America/New_York" },
+  { name: "London", timezone: "Europe/London" },
+  { name: "Tokyo", timezone: "Asia/Tokyo" },
+  { name: "Mumbai", timezone: "Asia/Kolkata" },
+  { name: "Sydney", timezone: "Australia/Sydney" },
+  { name: "Dubai", timezone: "Asia/Dubai" },
+  { name: "Paris", timezone: "Europe/Paris" },
+  { name: "Singapore", timezone: "Asia/Singapore" },
+  { name: "Beijing", timezone: "Asia/Shanghai" },
+  { name: "Los Angeles", timezone: "America/Los_Angeles" }
+];
 
 export default function Home() {
+  const [time, setTime] = useState(new Date());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const interval = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight">
+          Supercharge Your Time
+        </h1>
+        <p className="text-lg md:text-xl text-[var(--muted-foreground)] max-w-2xl mx-auto">
+          The ultimate utility for calculators, timezone conversions, fun astrology, and everything related to time.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+        {/* Local Time */}
+        <div className="glass-panel p-8 text-center flex flex-col justify-center items-center">
+          <h2 className="text-2xl font-medium mb-2">Local Time</h2>
+          <div className="text-5xl md:text-7xl font-bold font-mono tracking-tighter text-primary">
+            {format(time, "HH:mm:ss")}
+          </div>
+          <div className="text-xl mt-4 text-[var(--muted-foreground)]">
+            {format(time, "EEEE, MMMM do, yyyy")}
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* UTC Time */}
+        <div className="glass-panel p-8 text-center flex flex-col justify-center items-center">
+          <h2 className="text-2xl font-medium mb-2">UTC Time</h2>
+          <div className="text-5xl md:text-7xl font-bold font-mono tracking-tighter">
+            {formatInTimeZone(time, "UTC", "HH:mm:ss")}
+          </div>
+          <div className="text-xl mt-4 text-[var(--muted-foreground)]">
+            {formatInTimeZone(time, "UTC", "EEEE, MMMM do, yyyy")}
+          </div>
         </div>
-      </main>
+      </div>
+
+      {/* Trending Cities */}
+      <h2 className="text-3xl font-bold mb-6">Trending Cities</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {CITIES.map((city) => (
+          <div key={city.name} className="glass-panel p-4 flex flex-col justify-center">
+            <h3 className="font-semibold mb-1">{city.name}</h3>
+            <div className="text-2xl font-bold font-mono text-primary">
+              {formatInTimeZone(time, city.timezone, "HH:mm")}
+            </div>
+            <div className="text-sm text-[var(--muted-foreground)]">
+              {formatInTimeZone(time, city.timezone, "MMM do, yyyy")}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

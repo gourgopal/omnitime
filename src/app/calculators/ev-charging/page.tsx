@@ -32,23 +32,23 @@ type ChargeHistoryItem = {
 };
 
 export default function EVChargingCalculator() {
-  const [capacity, setCapacity] = useState<number>(40.5);
-  const [customRange, setCustomRange] = useState<number>(263);
-  const [startSoc, setStartSoc] = useState<number>(10);
-  const [endSoc, setEndSoc] = useState<number>(100);
-  const [chargerKw, setChargerKw] = useState<number>(7.2);
-  const [efficiency, setEfficiency] = useState<number>(90);
+  const [capacity, setCapacity] = useState<number | string>(40.5);
+  const [customRange, setCustomRange] = useState<number | string>(263);
+  const [startSoc, setStartSoc] = useState<number | string>(10);
+  const [endSoc, setEndSoc] = useState<number | string>(100);
+  const [chargerKw, setChargerKw] = useState<number | string>(7.2);
+  const [efficiency, setEfficiency] = useState<number | string>(90);
   const [curveType, setCurveType] = useState<"conservative" | "aggressive" | "linear">("conservative");
 
   // Advanced State
-  const [whPerKm, setWhPerKm] = useState<number>(154);
+  const [whPerKm, setWhPerKm] = useState<number | string>(154);
   const [simSpeed, setSimSpeed] = useState<number>(1);
 
   // Economics
-  const [costPerKwh, setCostPerKwh] = useState<number>(8);
+  const [costPerKwh, setCostPerKwh] = useState<number | string>(8);
   const [currency, setCurrency] = useState<string>("₹");
-  const [petrolPrice, setPetrolPrice] = useState<number>(110); // 110 per liter
-  const [iceEfficiency, setIceEfficiency] = useState<number>(15); // 15 km/l
+  const [petrolPrice, setPetrolPrice] = useState<number | string>(110); // 110 per liter
+  const [iceEfficiency, setIceEfficiency] = useState<number | string>(15); // 15 km/l
 
   // Searchable Dropdown State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -63,6 +63,8 @@ export default function EVChargingCalculator() {
     isPaused, 
     simSoc, 
     chargeHistory,
+    completedSummary,
+    setCompletedSummary,
     setChargeHistory,
     startSimulation, 
     stopSimulation, 
@@ -110,14 +112,24 @@ export default function EVChargingCalculator() {
   };
 
   const calculateTime = () => {
-    if (startSoc >= endSoc) return null;
-    const effectiveKw = chargerKw * (efficiency / 100);
+    const numStart = Number(startSoc) || 0;
+    const numEnd = Number(endSoc) || 0;
+    const numCap = Number(capacity) || 0;
+    const numCharger = Number(chargerKw) || 0;
+    const numEff = Number(efficiency) || 0;
+    const numCost = Number(costPerKwh) || 0;
+    const numRange = Number(customRange) || 0;
+    const numPetrol = Number(petrolPrice) || 0;
+    const numIceEff = Number(iceEfficiency) || 0;
+
+    if (numStart >= numEnd) return null;
+    const effectiveKw = numCharger * (numEff / 100);
     const calculatePhase = (start: number, end: number, powerMultiplier: number) => {
-      if (startSoc >= end || endSoc <= start) return 0;
-      const effectiveStart = Math.max(startSoc, start);
-      const effectiveEnd = Math.min(endSoc, end);
+      if (numStart >= end || numEnd <= start) return 0;
+      const effectiveStart = Math.max(numStart, start);
+      const effectiveEnd = Math.min(numEnd, end);
       const percentToCharge = (effectiveEnd - effectiveStart) / 100;
-      const energyNeeded = capacity * percentToCharge;
+      const energyNeeded = numCap * percentToCharge;
       const power = effectiveKw * powerMultiplier;
       return energyNeeded / power;
     };
@@ -152,16 +164,16 @@ export default function EVChargingCalculator() {
     const mins = Math.round((totalHours - hrs) * 60);
     
     // Economics calculations
-    const energyRequiredGrid = ((endSoc - startSoc) / 100) * capacity / (efficiency/100);
-    const totalCost = energyRequiredGrid * costPerKwh;
+    const energyRequiredGrid = ((numEnd - numStart) / 100) * numCap / (numEff/100);
+    const totalCost = energyRequiredGrid * numCost;
     
     // Range calculations
-    const carRange = customRange;
-    const rangeGained = carRange * ((endSoc - startSoc) / 100);
+    const carRange = numRange;
+    const rangeGained = carRange * ((numEnd - numStart) / 100);
     
     // ICE Savings
-    const iceFuelRequired = rangeGained / iceEfficiency;
-    const iceCost = iceFuelRequired * petrolPrice;
+    const iceFuelRequired = rangeGained / numIceEff;
+    const iceCost = iceFuelRequired * numPetrol;
     const savings = iceCost - totalCost;
 
     return { 
@@ -186,19 +198,22 @@ export default function EVChargingCalculator() {
 
     if (!result) return;
     
+    const numStart = Number(startSoc) || 0;
+    const numEnd = Number(endSoc) || 0;
+
     const totalMs = result.totalHours * 3600 * 1000;
-    let baseInterval = totalMs / (endSoc - startSoc);
+    let baseInterval = totalMs / (numEnd - numStart);
     if (isNaN(baseInterval) || !isFinite(baseInterval)) baseInterval = 1000;
     const intervalSpeed = Math.max(10, baseInterval / simSpeed);
 
     startSimulation({
-      startSoc,
-      endSoc,
-      capacity,
-      efficiency,
-      costPerKwh,
-      chargerKw,
-      customRange,
+      startSoc: numStart,
+      endSoc: numEnd,
+      capacity: Number(capacity) || 0,
+      efficiency: Number(efficiency) || 0,
+      costPerKwh: Number(costPerKwh) || 0,
+      chargerKw: Number(chargerKw) || 0,
+      customRange: Number(customRange) || 0,
       currency,
       intervalSpeed
     });
@@ -221,7 +236,7 @@ export default function EVChargingCalculator() {
         Calculate precise charging times, realistic range gained, and estimate savings against ICE vehicles.
       </p>
 
-      {startSoc < 20 && (
+      {Number(startSoc) < 20 && (
         <div className="mb-6 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 flex gap-3 items-start animate-in slide-in-from-top-4 fade-in">
           <AlertTriangle className="shrink-0 h-5 w-5 mt-0.5" />
           <div>
@@ -305,7 +320,7 @@ export default function EVChargingCalculator() {
                   <input
                     type="number"
                     value={capacity}
-                    onChange={(e) => setCapacity(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setCapacity(e.target.value)}
                     className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
@@ -315,9 +330,11 @@ export default function EVChargingCalculator() {
                       type="number"
                       value={customRange}
                       onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
+                        const val = e.target.value;
                         setCustomRange(val);
-                        if (val > 0) setWhPerKm(Math.round((capacity * 1000) / val));
+                        const numVal = parseFloat(val) || 0;
+                        const numCap = Number(capacity) || 0;
+                        if (numVal > 0 && numCap > 0) setWhPerKm(Math.round((numCap * 1000) / numVal));
                       }}
                       className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                     />
@@ -330,7 +347,7 @@ export default function EVChargingCalculator() {
                   <input
                     type="number" min="0" max="99"
                     value={isSimulating ? simSoc : startSoc}
-                    onChange={(e) => !isSimulating && setStartSoc(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => !isSimulating && setStartSoc(e.target.value)}
                     disabled={isSimulating}
                     className={`w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none ${isSimulating ? 'text-primary font-bold animate-pulse' : ''}`}
                   />
@@ -340,7 +357,7 @@ export default function EVChargingCalculator() {
                   <input
                     type="number" min="1" max="100"
                     value={endSoc}
-                    onChange={(e) => setEndSoc(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setEndSoc(e.target.value)}
                     disabled={isSimulating}
                     className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none disabled:opacity-50"
                   />
@@ -358,7 +375,7 @@ export default function EVChargingCalculator() {
                   <input
                     type="number" step="0.1"
                     value={chargerKw}
-                    onChange={(e) => setChargerKw(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setChargerKw(e.target.value)}
                     className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
@@ -367,7 +384,7 @@ export default function EVChargingCalculator() {
                   <input
                     type="number" step="0.1"
                     value={costPerKwh}
-                    onChange={(e) => setCostPerKwh(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setCostPerKwh(e.target.value)}
                     className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
@@ -376,7 +393,7 @@ export default function EVChargingCalculator() {
                   <input
                     type="number" step="1"
                     value={petrolPrice}
-                    onChange={(e) => setPetrolPrice(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setPetrolPrice(e.target.value)}
                     className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
@@ -385,7 +402,7 @@ export default function EVChargingCalculator() {
                   <input
                     type="number" step="1"
                     value={iceEfficiency}
-                    onChange={(e) => setIceEfficiency(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => setIceEfficiency(e.target.value)}
                     className="w-full p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                   />
                 </div>
@@ -436,9 +453,11 @@ export default function EVChargingCalculator() {
                       type="number"
                       value={whPerKm}
                       onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
+                        const val = e.target.value;
                         setWhPerKm(val);
-                        if (val > 0) setCustomRange(Math.round((capacity * 1000) / val));
+                        const numVal = parseFloat(val) || 0;
+                        const numCap = Number(capacity) || 0;
+                        if (numVal > 0 && numCap > 0) setCustomRange(Math.round((numCap * 1000) / numVal));
                       }}
                       className="w-1/2 p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                     />
@@ -452,7 +471,7 @@ export default function EVChargingCalculator() {
                     <input
                       type="number" min="10" max="100"
                       value={efficiency}
-                      onChange={(e) => setEfficiency(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => setEfficiency(e.target.value)}
                       className="w-1/2 p-2.5 rounded-lg border border-[var(--glass-border)] bg-[var(--background)]/50 focus:ring-2 focus:ring-primary outline-none"
                     />
                     <span className="text-xs text-[var(--muted-foreground)] flex-1">Accounts for energy lost to heat and battery conditioning. Default is 90% (10% loss).</span>
@@ -465,8 +484,8 @@ export default function EVChargingCalculator() {
                   <div className="text-[var(--muted-foreground)]">
                     <h4 className="font-semibold text-blue-500 mb-1">Power Loss Physics</h4>
                     <p>
-                      Total battery energy required is <strong>{(((endSoc - startSoc) / 100) * capacity).toFixed(1)} kWh</strong>. 
-                      Due to {100 - efficiency}% efficiency loss, you will actually pull <strong>{(((endSoc - startSoc) / 100 * capacity) / (efficiency/100)).toFixed(1)} kWh</strong> from the grid to complete this charge.
+                      Total battery energy required is <strong>{(((Number(endSoc) - Number(startSoc)) / 100) * Number(capacity)).toFixed(1)} kWh</strong>. 
+                      Due to {100 - Number(efficiency)}% efficiency loss, you will actually pull <strong>{(((Number(endSoc) - Number(startSoc)) / 100 * Number(capacity)) / (Number(efficiency)/100)).toFixed(1)} kWh</strong> from the grid to complete this charge.
                     </p>
                   </div>
                 </div>
@@ -486,14 +505,14 @@ export default function EVChargingCalculator() {
                     <BatteryCharging className="w-8 h-8 animate-pulse" /> Live Charging
                   </h2>
                   
-                  <div className="text-8xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-primary to-blue-400 pb-2 pr-2">
+                  <div className="text-8xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-br from-primary to-blue-400 pb-4 pr-4 leading-none">
                      {simSoc}%
                   </div>
                   
                   <div className="grid grid-cols-2 gap-6 w-full mt-8">
                      <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md text-center border border-white/10">
                         <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Range Gained</p>
-                        <p className="text-2xl font-bold font-mono">+{Math.round(((simSoc - startSoc) / 100) * customRange)} km</p>
+                        <p className="text-2xl font-bold font-mono">+{Math.round(((simSoc - Number(startSoc)) / 100) * Number(customRange))} km</p>
                      </div>
                      <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md text-center border border-white/10">
                         <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Current Speed</p>
@@ -501,7 +520,7 @@ export default function EVChargingCalculator() {
                      </div>
                      <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-md text-center border border-white/10 col-span-2">
                         <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Estimated Cost</p>
-                        <p className="text-2xl font-bold font-mono text-red-400">{currency}{(((simSoc - startSoc) / 100) * capacity / (efficiency/100) * costPerKwh).toFixed(2)}</p>
+                        <p className="text-2xl font-bold font-mono text-red-400">{currency}{(((simSoc - Number(startSoc)) / 100) * Number(capacity) / (Number(efficiency)/100) * Number(costPerKwh)).toFixed(2)}</p>
                      </div>
                   </div>
                   
@@ -597,35 +616,45 @@ export default function EVChargingCalculator() {
                   </div>
                   <div className="p-4 space-y-4 text-sm text-[var(--muted-foreground)]">
                      
-                     <div className="space-y-2">
-                       <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Efficiency Impact (Wh/km)</p>
-                       <p>Your vehicle consumes {whPerKm} Wh/km. At this rate, gaining 100km of range requires {(whPerKm * 100 / 1000).toFixed(1)} kWh of battery energy.</p>
-                       <p className="text-xs">Aggressive driving or AC use can push this to {Math.round(whPerKm * 1.3)} Wh/km, reducing your max range to {Math.round((capacity * 1000) / (whPerKm * 1.3))} km.</p>
-                     </div>
+                      <div className="space-y-2">
+                        <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Efficiency Impact (Wh/km)</p>
+                        <p>Your vehicle consumes {whPerKm} Wh/km. At this rate, gaining 100km of range requires {(Number(whPerKm) * 100 / 1000).toFixed(1)} kWh of battery energy.</p>
+                        <p className="text-xs">Aggressive driving or AC use can push this to {Math.round(Number(whPerKm) * 1.3)} Wh/km, reducing your max range to {Math.round((Number(capacity) * 1000) / (Number(whPerKm) * 1.3))} km.</p>
+                      </div>
 
-                     <div className="space-y-2 pt-2">
-                       <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Charging Speeds (0-100%)</p>
-                       <ul className="space-y-1 text-xs font-mono">
-                         <li className="flex justify-between"><span>3.3kW (Portable AC):</span> <span>{Math.round(capacity / 3.3 * (100/efficiency))} hrs</span></li>
-                         <li className="flex justify-between"><span>7.2kW (Wallbox AC):</span> <span>{Math.round(capacity / 7.2 * (100/efficiency))} hrs</span></li>
-                         <li className="flex justify-between text-blue-400"><span>50kW (DC Fast):</span> <span>{Math.round(capacity / 50 * (100/efficiency) * 60)} mins</span></li>
-                       </ul>
-                     </div>
+                      <div className="space-y-2 pt-2">
+                        <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Charging Speeds (0-100%)</p>
+                        <ul className="space-y-1 text-xs font-mono">
+                          <li className="flex justify-between"><span>3.3kW (Portable AC):</span> <span>{Math.round(Number(capacity) / 3.3 * (100/Number(efficiency)))} hrs</span></li>
+                          <li className="flex justify-between"><span>7.2kW (Wallbox AC):</span> <span>{Math.round(Number(capacity) / 7.2 * (100/Number(efficiency)))} hrs</span></li>
+                          <li className="flex justify-between text-blue-400"><span>50kW (DC Fast):</span> <span>{Math.round(Number(capacity) / 50 * (100/Number(efficiency)) * 60)} mins</span></li>
+                        </ul>
+                      </div>
 
-                     <div className="space-y-2 pt-2">
-                       <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Battery Technology</p>
-                       <p className="text-xs">Most modern EVs use <strong>LFP (Lithium Iron Phosphate)</strong> batteries like BYD Blade or Tata Nexon. LFP is safer and can be charged to 100% regularly without significant degradation. <strong>NMC/NCA</strong> batteries (used in some premium EVs) charge faster but should ideally be kept between 20-80% for daily use.</p>
-                     </div>
+                      <div className="space-y-2 pt-2">
+                        <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Battery Technology & Degradation</p>
+                        <p className="text-xs mb-1">Most modern EVs use <strong>LFP (Lithium Iron Phosphate)</strong> (e.g., BYD Blade, Tata Nexon). LFP is safer and can be charged to 100% regularly without significant degradation. <strong>NMC/NCA</strong> batteries (used in premium/long-range EVs) charge faster but should ideally be kept between 20-80% for daily use.</p>
+                        <p className="text-xs font-mono bg-[var(--background)] p-2 rounded">
+                          LFP Lifespan: ~3000 cycles to 80% capacity<br/>
+                          Estimated: <strong>{Math.round(3000 * Number(customRange)).toLocaleString()} km</strong> before dropping to {Math.round(Number(capacity) * 0.8)} kWh capacity.
+                        </p>
+                      </div>
 
-                     <div className="space-y-2 pt-2">
-                       <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">Degradation Estimate</p>
-                       <p className="text-xs">Assuming standard LFP chemistry (~3000 cycles to 80% capacity):</p>
-                       <p className="text-xs">Lifespan: <strong>{Math.round(3000 * customRange).toLocaleString()} km</strong> before dropping to {Math.round(capacity * 0.8)} kWh capacity.</p>
-                     </div>
+                      <div className="space-y-2 pt-2">
+                        <p className="font-semibold text-foreground border-b border-[var(--glass-border)] pb-1">ICE Fuel Cost Comparison</p>
+                        <p className="text-xs">
+                          Petrol vs Diesel vs CNG vs Hybrid:<br/>
+                          - <strong>Petrol/Diesel (15-20km/l):</strong> Usually {currency}5 - {currency}8 per km.<br/>
+                          - <strong>CNG (25km/kg):</strong> Around {currency}3.5 - {currency}4.5 per km.<br/>
+                          - <strong>Strong Hybrid (22-25km/l):</strong> Around {currency}4 - {currency}5 per km.<br/>
+                          - <strong>EV Home Charging:</strong> Usually {currency}0.8 - {currency}1.5 per km.<br/>
+                          - <strong>EV Public Fast Charging:</strong> Usually {currency}2.5 - {currency}4 per km.
+                        </p>
+                      </div>
 
-                  </div>
-                </div>
-              )}
+                   </div>
+                 </div>
+               )}
 
 
               <div className="flex-grow" />
@@ -671,6 +700,60 @@ export default function EVChargingCalculator() {
           
         </div>
       </div>
+
+      {/* Completion Summary Dialog */}
+      {completedSummary && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-[var(--background)] border border-[var(--glass-border)] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 to-blue-500"></div>
+            
+            <div className="p-6 pb-2 text-center">
+              <div className="mx-auto w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mb-4 border border-green-500/20">
+                <BatteryCharging className="w-8 h-8 text-green-500 animate-pulse" />
+              </div>
+              <h2 className="text-2xl font-bold mb-1">Charging Complete!</h2>
+              <p className="text-[var(--muted-foreground)] text-sm mb-6">Your simulation has finished successfully.</p>
+            </div>
+            
+            <div className="px-6 space-y-4">
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="bg-[var(--card-bg)] p-3 rounded-xl border border-[var(--glass-border)] text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Session</p>
+                    <p className="font-bold text-lg">{completedSummary.startSoc}% → {completedSummary.endSoc}%</p>
+                 </div>
+                 <div className="bg-[var(--card-bg)] p-3 rounded-xl border border-[var(--glass-border)] text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)] mb-1">Time Elapsed</p>
+                    <p className="font-bold text-lg">{completedSummary.timeMins} mins</p>
+                 </div>
+               </div>
+               
+               <div className="bg-[var(--card-bg)] p-4 rounded-xl border border-[var(--glass-border)] space-y-3">
+                  <div className="flex justify-between items-center border-b border-[var(--glass-border)] pb-2">
+                    <span className="text-sm text-[var(--muted-foreground)]">Range Added</span>
+                    <span className="font-mono font-bold text-green-500">+{completedSummary.rangeGained} km</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-[var(--glass-border)] pb-2">
+                    <span className="text-sm text-[var(--muted-foreground)]">Energy Delivered</span>
+                    <span className="font-mono font-bold">{completedSummary.energy} kWh</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-[var(--muted-foreground)]">Total Cost</span>
+                    <span className="font-mono font-bold text-red-400">{currency}{completedSummary.cost}</span>
+                  </div>
+               </div>
+            </div>
+            
+            <div className="p-6 mt-2">
+              <button 
+                onClick={() => setCompletedSummary(null)}
+                className="w-full py-3 bg-primary text-primary-foreground font-bold rounded-xl hover:opacity-90 transition-opacity"
+              >
+                Okay, got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* History Modal */}
       {showHistory && (

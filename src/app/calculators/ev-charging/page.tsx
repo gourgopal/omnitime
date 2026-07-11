@@ -89,7 +89,7 @@ export default function EVChargingCalculator() {
 
   // Smart defaults for charger cost
   useEffect(() => {
-    if (chargerKw <= 11) {
+    if (Number(chargerKw) <= 11) {
       setCostPerKwh(8); // Home AC
     } else {
       setCostPerKwh(24); // Fast DC

@@ -9,11 +9,13 @@ interface LocationData {
   currency: string;
   latitude: number;
   longitude: number;
+  isPrecise?: boolean;
 }
 
 interface LocationContextType {
   location: LocationData | null;
   setLocation: (loc: LocationData) => void;
+  requestPreciseLocation: () => void;
   isLoading: boolean;
 }
 
@@ -44,73 +46,24 @@ export function LocationProvider({ children }: { children: ReactNode }) {
            return;
         }
 
-        // Try getting exact GPS coordinates first if the user allows it
-        // Or if we don't have valid coords from cache
-        if ("geolocation" in navigator) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              // We have precise coords! Let's still try to get the country/timezone from ipapi using a reverse geocode if needed,
-              // but for now, we can just mix it with ipapi data.
-              const res = await fetch("https://ipapi.co/json/");
-              const data = await res.json();
-              
-              if (data && data.country_name) {
-                const newLoc = {
-                  country_name: data.country_name,
-                  country_code: data.country_code,
-                  timezone: data.timezone,
-                  currency: data.currency,
-                  latitude: position.coords.latitude, // Use precise GPS
-                  longitude: position.coords.longitude // Use precise GPS
-                };
-                setLocationState(newLoc);
-                localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
-                localStorage.setItem("omnitime_location_time", now.toString());
-              }
-              setIsLoading(false);
-            },
-            async (error) => {
-              // Fallback to IP API
-              const res = await fetch("https://ipapi.co/json/");
-              const data = await res.json();
-              
-              if (data && data.country_name) {
-                const newLoc = {
-                  country_name: data.country_name,
-                  country_code: data.country_code,
-                  timezone: data.timezone,
-                  currency: data.currency,
-                  latitude: data.latitude,
-                  longitude: data.longitude
-                };
-                setLocationState(newLoc);
-                localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
-                localStorage.setItem("omnitime_location_time", now.toString());
-              }
-              setIsLoading(false);
-            },
-            { timeout: 5000, maximumAge: 60000 }
-          );
-        } else {
-            // Fallback for browsers without geolocation
-            const res = await fetch("https://ipapi.co/json/");
-            const data = await res.json();
-            
-            if (data && data.country_name) {
-              const newLoc = {
-                country_name: data.country_name,
-                country_code: data.country_code,
-                timezone: data.timezone,
-                currency: data.currency,
-                latitude: data.latitude,
-                longitude: data.longitude
-              };
-              setLocationState(newLoc);
-              localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
-              localStorage.setItem("omnitime_location_time", now.toString());
-            }
-            setIsLoading(false);
+        // Only use IP API for automatic coarse location to avoid browser prompt on load
+        const res = await fetch("https://ipapi.co/json/");
+        const data = await res.json();
+        
+        if (data && data.country_name) {
+          const newLoc = {
+            country_name: data.country_name,
+            country_code: data.country_code,
+            timezone: data.timezone,
+            currency: data.currency,
+            latitude: data.latitude,
+            longitude: data.longitude
+          };
+          setLocationState(newLoc);
+          localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
+          localStorage.setItem("omnitime_location_time", now.toString());
         }
+        setIsLoading(false);
       } catch (error) {
         console.warn("Failed to fetch location", error);
         setIsLoading(false);
@@ -120,6 +73,38 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     fetchLocation();
   }, []);
 
+  const requestPreciseLocation = () => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          // Merge exact GPS coords with existing IP data or refetch
+          const currentLoc = localStorage.getItem("omnitime_location");
+          let newLoc: any = currentLoc ? JSON.parse(currentLoc) : {};
+          
+          if (!newLoc.country_name) {
+             try {
+                const res = await fetch("https://ipapi.co/json/");
+                const data = await res.json();
+                if (data && data.country_name) newLoc = data;
+             } catch(e) {}
+          }
+          
+          newLoc.latitude = position.coords.latitude;
+          newLoc.longitude = position.coords.longitude;
+          newLoc.isPrecise = true; // flag to indicate user gave permission
+          
+          setLocationState(newLoc as LocationData);
+          localStorage.setItem("omnitime_location", JSON.stringify(newLoc));
+          localStorage.setItem("omnitime_location_time", new Date().getTime().toString());
+        },
+        (error) => {
+          console.warn("User denied geolocation or it failed", error);
+        },
+        { timeout: 5000, maximumAge: 60000 }
+      );
+    }
+  };
+
   const setLocation = (loc: LocationData) => {
     setLocationState(loc);
     localStorage.setItem("omnitime_location", JSON.stringify(loc));
@@ -127,7 +112,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <LocationContext.Provider value={{ location, setLocation, isLoading }}>
+    <LocationContext.Provider value={{ location, setLocation, requestPreciseLocation, isLoading }}>
       {children}
     </LocationContext.Provider>
   );

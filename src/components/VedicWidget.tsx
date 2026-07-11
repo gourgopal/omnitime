@@ -7,7 +7,7 @@ import { Moon, Sun, Sparkles, AlertCircle } from "lucide-react";
 
 export default function VedicWidget() {
   const [time, setTime] = useState(new Date());
-  const { location } = useLocation();
+  const { location, requestPreciseLocation } = useLocation();
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
@@ -62,10 +62,21 @@ export default function VedicWidget() {
 
         {/* Planetary Hour Info */}
         {hora ? (
-          <div className="bg-background/40 p-3 rounded-lg border border-[var(--glass-border)]">
-            <div className="text-[10px] uppercase font-bold text-[var(--muted-foreground)] mb-1 flex items-center gap-1">
-              {hora.isDaytime ? <Sun className="w-3 h-3 text-yellow-500" /> : <Moon className="w-3 h-3 text-blue-300" />}
-              {hora.isDaytime ? "Day" : "Night"} Hora {hora.hourIndex}/12
+          <div className="bg-background/40 p-3 rounded-lg border border-[var(--glass-border)] relative">
+            <div className="text-[10px] uppercase font-bold text-[var(--muted-foreground)] mb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                {hora.isDaytime ? <Sun className="w-3 h-3 text-yellow-500" /> : <Moon className="w-3 h-3 text-blue-300" />}
+                {hora.isDaytime ? "Day" : "Night"} Hora {hora.hourIndex}/12
+              </span>
+              {!location?.isPrecise && (
+                <button 
+                  onClick={requestPreciseLocation}
+                  className="bg-primary/10 hover:bg-primary/20 text-primary px-2 py-0.5 rounded transition-colors border border-primary/20"
+                  title="Use GPS for precise sunrise/sunset times"
+                >
+                  Enable GPS
+                </button>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -82,9 +93,17 @@ export default function VedicWidget() {
             </div>
           </div>
         ) : (
-          <div className="bg-background/40 p-3 rounded-lg border border-[var(--glass-border)] flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-            <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>Enable location to see your precise Planetary Hour.</span>
+          <div className="bg-background/40 p-3 rounded-lg border border-[var(--glass-border)] flex items-center justify-between text-xs text-[var(--muted-foreground)]">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+              <span>Enable location for precise calculations.</span>
+            </div>
+            <button 
+              onClick={requestPreciseLocation}
+              className="bg-primary/10 hover:bg-primary/20 text-primary px-2 py-1 rounded transition-colors border border-primary/20 whitespace-nowrap"
+            >
+              Enable
+            </button>
           </div>
         )}
         

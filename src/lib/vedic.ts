@@ -22,7 +22,55 @@ const PLANETS = [
 // Sunday(Sun=3), Monday(Moon=6), Tuesday(Mars=2), Wednesday(Mercury=5), Thursday(Jupiter=1), Friday(Venus=4), Saturday(Saturn=0)
 const LORD_OF_DAY_MAP = [3, 6, 2, 5, 1, 4, 0];
 
-export function getVedicPanchang(date: Date) {
+export function getTithiIndex(date: Date) {
+  const phase = MoonPhase(MakeTime(date));
+  return Math.floor(phase / 12) + 1; // 1 to 30
+}
+
+export function isFastingEkadashi(date: Date, lat: number, lon: number) {
+  const obs = new Observer(lat, lon, 0);
+  
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const sunriseToday = SearchRiseSet(Body.Sun, obs, 1, MakeTime(d), 1);
+  if (!sunriseToday) return false; 
+  
+  const arunodayaToday = new Date(sunriseToday.date.getTime() - 96 * 60 * 1000);
+  const tithiAtArunodayaToday = getTithiIndex(arunodayaToday);
+  
+  const yesterday = new Date(d);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const sunriseYesterday = SearchRiseSet(Body.Sun, obs, 1, MakeTime(yesterday), 1);
+  if (!sunriseYesterday) return false;
+  
+  const arunodayaYesterday = new Date(sunriseYesterday.date.getTime() - 96 * 60 * 1000);
+  const tithiAtArunodayaYesterday = getTithiIndex(arunodayaYesterday);
+
+  const tomorrow = new Date(d);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const sunriseTomorrow = SearchRiseSet(Body.Sun, obs, 1, MakeTime(tomorrow), 1);
+  if (!sunriseTomorrow) return false;
+  const arunodayaTomorrow = new Date(sunriseTomorrow.date.getTime() - 96 * 60 * 1000);
+  const tithiAtArunodayaTomorrow = getTithiIndex(arunodayaTomorrow);
+  
+  const is11Today = (tithiAtArunodayaToday === 11 || tithiAtArunodayaToday === 26);
+  const is11Yesterday = (tithiAtArunodayaYesterday === 11 || tithiAtArunodayaYesterday === 26);
+  const is10Yesterday = (tithiAtArunodayaYesterday === 10 || tithiAtArunodayaYesterday === 25);
+  const is12Today = (tithiAtArunodayaToday === 12 || tithiAtArunodayaToday === 27);
+  const is11Tomorrow = (tithiAtArunodayaTomorrow === 11 || tithiAtArunodayaTomorrow === 26);
+
+  if (is11Today && !is11Yesterday && !is11Tomorrow) {
+    return true; // Suddha Ekadashi
+  } else if (is11Today && is11Yesterday) {
+    return true; // Two-day Ekadashi, fast on second day
+  } else if (is10Yesterday && is12Today) {
+    return true; // Ekadashi skipped Arunodaya completely (Fast on Dwadashi)
+  }
+  
+  return false;
+}
+
+export function getVedicPanchang(date: Date, lat?: number, lon?: number) {
   const time = MakeTime(date);
   
   // 1. Calculate Tithi
@@ -54,11 +102,18 @@ export function getVedicPanchang(date: Date) {
   const nakshatraIndex = Math.floor(siderealMoon / (360 / 27));
   const nakshatraName = NAKSHATRAS[nakshatraIndex];
 
+  // Math Ekadashi check
+  let isEkadashi = tithiNum === 11;
+  // If location is provided, use exact Gaudiya rules
+  if (lat !== undefined && lon !== undefined) {
+    isEkadashi = isFastingEkadashi(date, lat, lon);
+  }
+
   return {
     paksha,
     tithiName,
     tithiNum,
-    isEkadashi: tithiNum === 11,
+    isEkadashi,
     nakshatraName,
     phasePercent: (phase / 360) * 100
   };

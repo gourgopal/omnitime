@@ -66,7 +66,7 @@ export function getLunisolarInfo(date: Date = new Date()): LunisolarInfo {
   };
 }
 
-export function getMonthlyLunisolarEvents(year: number, month: number) {
+export function getMonthlyLunisolarEvents(year: number, month: number, lat?: number, lon?: number) {
   // Month is 0-indexed here from JS Date, lunar-javascript wants 1-12
   const events = [];
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -97,7 +97,7 @@ export function getMonthlyLunisolarEvents(year: number, month: number) {
     });
 
     // Check Vedic Panchang for Ekadashi
-    const vedic = getVedicPanchang(d);
+    const vedic = getVedicPanchang(d, lat, lon);
     if (vedic.isEkadashi) {
       events.push({
         date: d,

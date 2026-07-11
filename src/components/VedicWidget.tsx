@@ -16,8 +16,8 @@ export default function VedicWidget() {
 
   const hasCoords = location?.latitude !== undefined && location?.longitude !== undefined;
   
-  // Calculate Panchang (does not strictly require coords)
-  const panchang = getVedicPanchang(time);
+  // Calculate Panchang
+  const panchang = getVedicPanchang(time, location?.latitude, location?.longitude);
   
   // Calculate Planetary Hour (strictly requires coords for sunrise/sunset)
   let hora = null;

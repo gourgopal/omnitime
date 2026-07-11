@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Leaf, Star, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { getMonthlyLunisolarEvents, getLunisolarInfo } from "@/lib/lunisolar";
+import { useLocation } from "@/components/location-provider";
 
 export default function LunisolarCalculator() {
   const [mounted, setMounted] = useState(false);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const { location, isLoading: locationLoading } = useLocation();
 
   useEffect(() => {
     setMounted(true);
@@ -30,7 +32,11 @@ export default function LunisolarCalculator() {
   const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
 
-  const events = getMonthlyLunisolarEvents(year, month);
+  // If no location, we fallback to a central location for rough calculation
+  const lat = location?.latitude ?? 23.42; 
+  const lon = location?.longitude ?? 88.39;
+
+  const events = getMonthlyLunisolarEvents(year, month, lat, lon);
   const currentInfo = getLunisolarInfo(new Date());
 
   return (
